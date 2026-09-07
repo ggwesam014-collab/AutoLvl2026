@@ -286,7 +286,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 32)
 Title.Position = UDim2.new(0, 0, 0, 5)
 Title.BackgroundTransparency = 1
-Title.Text = "Spider Hub🕷"
+Title.Text = "Spider Hub - All Seas { 2.0 }"
 Title.TextColor3 = Color3.fromRGB(220, 20, 20)
 Title.TextSize = 15
 Title.Font = Enum.Font.SourceSansBold
@@ -340,12 +340,12 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local ToggleUI = Instance.new("TextButton")
+local ToggleUI = Instance.new("ImageButton")
 ToggleUI.Size = UDim2.new(0, 48, 0, 48)
 ToggleUI.Position = UDim2.new(0.05, 0, 0.2, 0)
 ToggleUI.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ToggleUI.Text = "🕷"
-ToggleUI.textColor3 = Color3.fromRGB(220, 20, 20)
+ToggleUI.Image = "rbxassetid://10643765103"
+ToggleUI.ImageColor3 = Color3.fromRGB(220, 20, 20)
 ToggleUI.Active = true
 ToggleUI.Draggable = true
 ToggleUI.Parent = ScreenGui
