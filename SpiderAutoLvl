@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Fixed Rubberband TP, Auto Equip & Fast Attack (Sea 1, 2, 3)
+-- Ultimate Smooth Auto Farm & Fast Attack Fix (Sea 1, 2, 3)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -38,54 +38,73 @@ local Dropdown = Tab:CreateDropdown({
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 
--- Enhanced Auto Equip Weapon
+-- Auto Equip
 local function equipWeapon()
     local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("Humanoid") then return end
+    if not character then return end
     
-    -- Check if tool is already equipped
-    for _, item in pairs(character:GetChildren()) do
-        if item:IsA("Tool") then
-            return -- Tool is already equipped
-        end
-    end
-    
-    -- Equip from backpack
-    local backpack = LocalPlayer.Backpack
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            if _G.SelectedWeapon == "Melee" and (tool.ToolTip == "Melee" or tool.Name:find("Combat") or tool.Name:find("Step") or tool.Name:find("Karate") or tool.Name:find("Kung Fu")) then
-                character.Humanoid:EquipTool(tool)
-                break
-            elseif _G.SelectedWeapon == "Sword" and tool.ToolTip == "Sword" then
-                character.Humanoid:EquipTool(tool)
-                break
-            elseif _G.SelectedWeapon == "Blox Fruit" and tool.ToolTip == "Blox Fruit" then
-                character.Humanoid:EquipTool(tool)
-                break
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool then
+        for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                if _G.SelectedWeapon == "Melee" and (item.ToolTip == "Melee" or item.Name:find("Combat") or item.Name:find("Step") or item.Name:find("Karate") or item.Name:find("Kung Fu") or item.Name:find("Dragon") or item.Name:find("Claw") or item.Name:find("Superhuman") or item.Name:find("Godhuman")) then
+                    character.Humanoid:EquipTool(item)
+                    break
+                elseif _G.SelectedWeapon == "Sword" and item.ToolTip == "Sword" then
+                    character.Humanoid:EquipTool(item)
+                    break
+                elseif _G.SelectedWeapon == "Blox Fruit" and item.ToolTip == "Blox Fruit" then
+                    character.Humanoid:EquipTool(item)
+                    break
+                end
             end
         end
     end
 end
 
--- Fast Click Attack Fix
-local function attack()
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+-- Fast Attack Execution
+local function doAttack()
+    equipWeapon()
+    VirtualUser:CaptureController()
+    VirtualUser:Button1Down(Vector2.new(500, 500))
 end
 
--- Anti-Rubberband Teleport
-local function safeTeleport(targetCFrame)
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local hrp = character.HumanoidRootPart
-        
-        -- Stop Velocity to prevent physics kickbacks
-        hrp.Velocity = Vector3.new(0,0,0)
-        hrp.CFrame = targetCFrame
+-- Noclip Bypass
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoFarm and LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
     end
+end)
+
+-- Anti-Rubberband Smooth Tween Bypass
+local currentTween = nil
+local function tweenTo(targetCFrame)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+    
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    if distance < 10 then
+        if currentTween then currentTween:Cancel() end
+        hrp.CFrame = targetCFrame
+        return
+    end
+
+    local speed = 320
+    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+    
+    if currentTween then currentTween:Cancel() end
+    currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    currentTween:Play()
 end
 
 -- Check Active Quest
@@ -100,7 +119,7 @@ local function hasQuest()
     return false
 end
 
--- Quests Database
+-- Quests Database (Sea 1, 2, 3 - Up to 2800)
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -172,29 +191,31 @@ local function getQuestData()
     end
 end
 
--- Main Farming Logic Loop
-local questDelay = 0
+-- Main Farming Loop
+local lastQuestTime = 0
 
 task.spawn(function()
-    while task.wait(0.05) do
+    while task.wait(0.1) do
         if _G.AutoFarm then
             pcall(function()
                 local questInfo = getQuestData()
                 if not questInfo then return end
 
-                -- Step 1: Request Quest only when needed
-                if not hasQuest() and tick() - questDelay > 3 then
-                    safeTeleport(questInfo.NpcCFrame)
-                    task.wait(0.2)
-                    
-                    local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                    if commF then
-                        commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
-                        questDelay = tick()
-                        task.wait(0.3)
+                -- Step 1: Take Quest
+                if not hasQuest() then
+                    if tick() - lastQuestTime > 2 then
+                        tweenTo(questInfo.NpcCFrame)
+                        local dist = (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude
+                        if dist <= 25 then
+                            local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                            if commF then
+                                commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
+                                lastQuestTime = tick()
+                            end
+                        end
                     end
                 else
-                    -- Step 2: Fight Enemies or Teleport to Spawn
+                    -- Step 2: Farm Mobs
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
@@ -208,13 +229,12 @@ task.spawn(function()
                     end
 
                     if targetMob then
-                        -- Safe positioning right above mob's head
-                        safeTeleport(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0))
-                        equipWeapon()
-                        attack()
+                        -- Hover above mob and attack
+                        tweenTo(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0))
+                        doAttack()
                     else
-                        -- Stand at Mob Waypoint to trigger spawn
-                        safeTeleport(questInfo.MobWaypoint * CFrame.new(0, 8, 0))
+                        -- Stand at waypoint to force mob spawn
+                        tweenTo(questInfo.MobWaypoint * CFrame.new(0, 10, 0))
                     end
                 end
             end)
