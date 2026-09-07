@@ -1,5 +1,5 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Fixed Quest & Auto Kill Attack
+-- Spider Hub - { 2.0 } | Fixed Bypass Tween & Clean UI
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -77,18 +77,46 @@ local function GetMyQuestData()
 end
 
 -- =================================================================
--- 2. محرك التوين المباشر السلس
+-- 2. إيقاف الحركة والـ NoClip بشكل كامل عند الإطفاء
 -- =================================================================
 local currentTween = nil
+local noclipConnection = nil
 
-local function StopTween()
+local function StopAllMovement()
     if currentTween then
         currentTween:Cancel()
         currentTween = nil
     end
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
+    
+    local char = LocalPlayer.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local bv = hrp:FindFirstChild("SpiderBV")
+            if bv then bv:Destroy() end
+        end
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then
+            pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+        end
+    end
 end
 
-local function RedzStyleTween(targetCFrame)
+local function BypassTween(targetCFrame)
+    if not _G.AutoFarm then 
+        StopAllMovement()
+        return 
+    end
+
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
     
@@ -96,12 +124,28 @@ local function RedzStyleTween(targetCFrame)
     local humanoid = char.Humanoid
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
 
-    if distance <= 8 then
-        StopTween()
+    if distance <= 10 then
+        if currentTween then currentTween:Cancel() end
         hrp.CFrame = targetCFrame
         return
     end
 
+    -- 1. إلغاء التصادم في كل Frame
+    if not noclipConnection then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if _G.AutoFarm and LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            else
+                StopAllMovement()
+            end
+        end)
+    end
+
+    -- 2. إلغاء الجاذبية
     local bv = hrp:FindFirstChild("SpiderBV") or Instance.new("BodyVelocity")
     bv.Name = "SpiderBV"
     bv.Velocity = Vector3.new(0, 0, 0)
@@ -110,30 +154,24 @@ local function RedzStyleTween(targetCFrame)
 
     pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
 
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-
-    local speed = 280
+    -- 3. Tween بحساب سرعة مقبولة
+    local speed = 310
     local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
     
-    StopTween()
+    if currentTween then currentTween:Cancel() end
     currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
     currentTween:Play()
 end
 
 -- =================================================================
--- 3. البحث عن الوحش والتحقق من المهمة
+-- 3. فحص المهمة والضرب والقتال
 -- =================================================================
-local function CheckHasQuest()
+local lastQuestCheck = 0
+
+local function HasQuestActive()
     local myGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
-    if myGui then
-        local questFrame = myGui:FindFirstChild("Quest")
-        if questFrame and questFrame.Visible then
-            return true
-        end
+    if myGui and myGui:FindFirstChild("Quest") then
+        return myGui.Quest.Visible
     end
     return false
 end
@@ -162,7 +200,7 @@ local function FastAttack()
 end
 
 -- =================================================================
--- 4. الحلقة الأساسية المصلحة
+-- 4. الحلقة الرئيسية المحدثة
 -- =================================================================
 task.spawn(function()
     while true do
@@ -170,10 +208,10 @@ task.spawn(function()
         if _G.AutoFarm then
             local questData = GetMyQuestData()
             if questData then
-                local hasQuest = CheckHasQuest()
+                local questActive = HasQuestActive()
 
-                if not hasQuest then
-                    -- الذهاب لأخذ المهمة
+                if not questActive then
+                    -- جلب المهمة
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -182,11 +220,13 @@ task.spawn(function()
                         end
                     end
                     
-                    RedzStyleTween(npcPos * CFrame.new(0, 2, 3))
+                    BypassTween(npcPos * CFrame.new(0, 2, 3))
                     
                     if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 15 then
-                        CommF:InvokeServer("StartQuest", questData.QuestName, 1)
-                        task.wait(0.4)
+                        if tick() - lastQuestCheck > 1 then
+                            lastQuestCheck = tick()
+                            CommF:InvokeServer("StartQuest", questData.QuestName, 1)
+                        end
                     end
                 else
                     -- الذهاب وقتل الوحوش
@@ -196,97 +236,100 @@ task.spawn(function()
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
                         
                         if dist > 12 then
-                            RedzStyleTween(enemyPos)
+                            BypassTween(enemyPos)
                         else
-                            StopTween()
+                            if currentTween then currentTween:Cancel() end
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
                             FastAttack()
                         end
                     else
-                        -- الانتقال لمنطقة الوحوش والانتظار عند عدم وجودهم
-                        RedzStyleTween(questData.FallbackNPC * CFrame.new(0, 20, 0))
+                        -- الانتقال لموقع السباون والانتظار
+                        BypassTween(questData.FallbackNPC * CFrame.new(0, 20, 0))
                     end
                 end
             end
         else
-            StopTween()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local bv = LocalPlayer.Character.HumanoidRootPart:FindFirstChild("SpiderBV")
-                if bv then bv:Destroy() end
-            end
+            StopAllMovement()
         end
     end
 end)
 
 -- =================================================================
--- 5. الواجهة (Spider Hub - { 2.0 })
+-- 5. الواجهة المصلحة (Spider Hub - { 2.0 })
 -- =================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SpiderHub2"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = gethui and gethui() or CoreGui
 
+-- الفريم الرئيسي
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -140, 0.4, -90)
+MainFrame.Size = UDim2.new(0, 260, 0, 170)
+MainFrame.Position = UDim2.new(0.5, -130, 0.4, -85)
 MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(220, 20, 20)
-MainStroke.Thickness = 2.5
+MainStroke.Thickness = 1.5 -- حدود ناعمة لا تغطي على الكلام
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 MainStroke.Parent = MainFrame
 
+-- العنوان
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Size = UDim2.new(1, 0, 0, 32)
 Title.Position = UDim2.new(0, 0, 0, 5)
 Title.BackgroundTransparency = 1
 Title.Text = "Spider Hub - { 2.0 }"
 Title.TextColor3 = Color3.fromRGB(220, 20, 20)
-Title.TextSize = 18
+Title.TextSize = 16
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
+-- زر Auto Farm
 local AutoFarmBtn = Instance.new("TextButton")
-AutoFarmBtn.Size = UDim2.new(0.85, 0, 0, 42)
-AutoFarmBtn.Position = UDim2.new(0.075, 0, 0.28, 0)
+AutoFarmBtn.Size = UDim2.new(0.88, 0, 0, 38)
+AutoFarmBtn.Position = UDim2.new(0.06, 0, 0.28, 0)
 AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
 AutoFarmBtn.Text = "Auto Farm Level: OFF"
 AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-AutoFarmBtn.TextSize = 14
+AutoFarmBtn.TextSize = 13
 AutoFarmBtn.Font = Enum.Font.SourceSansBold
 AutoFarmBtn.Parent = MainFrame
 
 local BtnCorner1 = Instance.new("UICorner")
-BtnCorner1.CornerRadius = UDim.new(0, 8)
+BtnCorner1.CornerRadius = UDim.new(0, 6)
 BtnCorner1.Parent = AutoFarmBtn
 
 local BtnStroke1 = Instance.new("UIStroke")
 BtnStroke1.Color = Color3.fromRGB(220, 20, 20)
-BtnStroke1.Thickness = 1.5
+BtnStroke1.Thickness = 1
+BtnStroke1.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 BtnStroke1.Parent = AutoFarmBtn
 
+-- زر Coming Soon
 local ComingSoonBtn = Instance.new("TextButton")
-ComingSoonBtn.Size = UDim2.new(0.85, 0, 0, 42)
-ComingSoonBtn.Position = UDim2.new(0.075, 0, 0.62, 0)
-ComingSoonBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ComingSoonBtn.Size = UDim2.new(0.88, 0, 0, 38)
+ComingSoonBtn.Position = UDim2.new(0.06, 0, 0.60, 0)
+ComingSoonBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ComingSoonBtn.Text = "Coming Soon🔒"
 ComingSoonBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-ComingSoonBtn.TextSize = 14
+ComingSoonBtn.TextSize = 13
 ComingSoonBtn.Font = Enum.Font.SourceSansBold
 ComingSoonBtn.AutoButtonColor = false
 ComingSoonBtn.Parent = MainFrame
 
 local BtnCorner2 = Instance.new("UICorner")
-BtnCorner2.CornerRadius = UDim.new(0, 8)
+BtnCorner2.CornerRadius = UDim.new(0, 6)
 BtnCorner2.Parent = ComingSoonBtn
 
+-- تفاعل زر التفعيل
 AutoFarmBtn.MouseButton1Click:Connect(function()
     _G.AutoFarm = not _G.AutoFarm
     if _G.AutoFarm then
@@ -297,17 +340,13 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
         AutoFarmBtn.Text = "Auto Farm Level: OFF"
         AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
         AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-        
-        StopTween()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local bv = LocalPlayer.Character.HumanoidRootPart:FindFirstChild("SpiderBV")
-            if bv then bv:Destroy() end
-        end
+        StopAllMovement()
     end
 end)
 
+-- زر Toggle الدائري (عنكبوت)
 local ToggleUI = Instance.new("ImageButton")
-ToggleUI.Size = UDim2.new(0, 50, 0, 50)
+ToggleUI.Size = UDim2.new(0, 48, 0, 48)
 ToggleUI.Position = UDim2.new(0.05, 0, 0.2, 0)
 ToggleUI.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 ToggleUI.Image = "rbxassetid://10643765103"
@@ -322,7 +361,8 @@ ToggleCorner.Parent = ToggleUI
 
 local ToggleStroke = Instance.new("UIStroke")
 ToggleStroke.Color = Color3.fromRGB(220, 20, 20)
-ToggleStroke.Thickness = 2
+ToggleStroke.Thickness = 1.5
+ToggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 ToggleStroke.Parent = ToggleUI
 
 ToggleUI.MouseButton1Click:Connect(function()
