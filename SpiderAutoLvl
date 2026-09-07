@@ -1,5 +1,5 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Smooth Step-Lerp & Fixed Quest Loop
+-- Spider Hub - { 2.0 } | Ultimate Anti-Rubberband & No-Lag Bypass
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -76,78 +76,64 @@ local function GetMyQuestData()
 end
 
 -- =================================================================
--- 2. محرك الحركة المحدث (Smooth Movement Engine)
+-- 2. المحرك المطور لمنع الـ Rubberband (Anti-Rubberband Engine)
 -- =================================================================
-local isMoving = false
-
-local function StopMovement()
-    isMoving = false
-    local char = LocalPlayer.Character
-    if char then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local bv = hrp:FindFirstChild("SpiderBV")
-            if bv then bv:Destroy() end
+local function ResetVelocity(char)
+    if not char then return end
+    for _, v in pairs(char:GetChildren()) do
+        if v:IsA("BasePart") then
+            v.Velocity = Vector3.new(0, 0, 0)
+            v.RotVelocity = Vector3.new(0, 0, 0)
         end
     end
 end
 
-local function MoveToTarget(targetCFrame)
-    if not _G.AutoFarm then
-        StopMovement()
-        return
-    end
-
+local function SmoothBypassBlink(targetCFrame)
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
     local hrp = char.HumanoidRootPart
-    local humanoid = char.Humanoid
     local dist = (hrp.Position - targetCFrame.Position).Magnitude
 
-    if dist <= 8 then
-        hrp.CFrame = targetCFrame
-        StopMovement()
-        return
-    end
-
-    isMoving = true
-
-    -- إيقاف التصادم للفيزياء
+    -- تعطيل التصادم
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
         end
     end
 
-    -- تثبيت BodyVelocity منعاً لتعليق الفيزياء
-    local bv = hrp:FindFirstChild("SpiderBV") or Instance.new("BodyVelocity")
-    bv.Name = "SpiderBV"
-    bv.Velocity = Vector3.new(0, 0, 0)
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bv.Parent = hrp
-
-    pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
-
-    -- الانتقال التدريجي بحساب المسافة والسلاسة (Step Speed = 220)
-    local speed = 220
-    local stepDistance = speed * RunService.Heartbeat:Wait()
-    local direction = (targetCFrame.Position - hrp.Position).Unit
-    
-    if dist > stepDistance then
-        hrp.CFrame = hrp.CFrame + (direction * stepDistance)
-    else
+    if dist <= 12 then
         hrp.CFrame = targetCFrame
+        ResetVelocity(char)
+        return
+    end
+
+    -- تقسيم المسافة إلى أجزاء صغيرة جداً (Steps) مع مراعاة سرعة السيرفر الآمنة
+    local stepSize = 18 -- حجم القفزة الواحدة
+    local currentPos = hrp.Position
+    local targetPos = targetCFrame.Position
+    local direction = (targetPos - currentPos).Unit
+    local steps = math.floor(dist / stepSize)
+
+    for i = 1, steps do
+        if not _G.AutoFarm or not LocalPlayer.Character then break end
+        
+        currentPos = currentPos + (direction * stepSize)
+        hrp.CFrame = CFrame.new(currentPos, targetPos)
+        ResetVelocity(char)
+
+        -- تأخير آمن جداً يمنع كشف السيرفر للحركة
+        task.wait(0.02)
+    end
+
+    if _G.AutoFarm and LocalPlayer.Character then
+        hrp.CFrame = targetCFrame
+        ResetVelocity(char)
     end
 end
 
 -- =================================================================
--- 3. فحص المهمة والضرب
+-- 3. منطق التلفيل المباشر
 -- =================================================================
 local lastQuestTime = 0
 
@@ -187,14 +173,14 @@ end
 -- =================================================================
 task.spawn(function()
     while true do
-        task.wait()
+        task.wait(0.05)
         if _G.AutoFarm then
             local questData = GetMyQuestData()
             if questData then
                 local questActive = HasQuestActive()
 
                 if not questActive then
-                    -- أخذ المهمة
+                    -- الذهاب واستلام المهمة
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -203,10 +189,10 @@ task.spawn(function()
                         end
                     end
 
-                    MoveToTarget(npcPos * CFrame.new(0, 2, 3))
+                    SmoothBypassBlink(npcPos * CFrame.new(0, 2, 3))
 
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 12 then
-                        if tick() - lastQuestTime > 1.5 then
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 15 then
+                        if tick() - lastQuestTime > 1.2 then
                             lastQuestTime = tick()
                             CommF:InvokeServer("StartQuest", questData.QuestName, 1)
                         end
@@ -219,19 +205,18 @@ task.spawn(function()
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
 
                         if dist > 10 then
-                            MoveToTarget(enemyPos)
+                            SmoothBypassBlink(enemyPos)
                         else
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
+                            ResetVelocity(LocalPlayer.Character)
                             FastAttack()
                         end
                     else
-                        -- الانتظار في الموقع عند عدم إرسال أعداء
-                        MoveToTarget(questData.FallbackNPC * CFrame.new(0, 15, 0))
+                        -- الانتظار فوق موقع الوحوش عند إعادة الإرسال (Respawn)
+                        SmoothBypassBlink(questData.FallbackNPC * CFrame.new(0, 15, 0))
                     end
                 end
             end
-        else
-            StopMovement()
         end
     end
 end)
@@ -317,7 +302,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
         AutoFarmBtn.Text = "Auto Farm Level: OFF"
         AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
         AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-        StopMovement()
+        ResetVelocity(LocalPlayer.Character)
     end
 end)
 
