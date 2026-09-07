@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Auto Level with Mob Spawn Waypoints (Sea 1, 2, 3 - Level 2800)
+-- Auto Level with Forced Waypoint Trigger (Sea 1, 2, 3 - Level 2800)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -86,7 +86,7 @@ local function flyTo(targetCFrame)
     end
 end
 
--- Database: Quests, Mob Names, NPC Coordinates, and Mob Spawn Waypoints
+-- Quests & Spawn Waypoints Database (Sea 1, 2, 3)
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -169,10 +169,10 @@ task.spawn(function()
                 local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
                 local questGui = mainGui and mainGui:FindFirstChild("Quest")
                 
-                -- Step 1: Take Quest if not active
+                -- Step 1: Take Quest
                 if not questGui or not questGui.Visible then
                     flyTo(questInfo.NpcCFrame)
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude <= 12 then
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude <= 15 then
                         local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
                         if commF then
                             commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
@@ -180,9 +180,9 @@ task.spawn(function()
                         end
                     end
                 else
-                    -- Step 2: Search for spawned Mob
-                    local enemies = workspace:FindFirstChild("Enemies")
+                    -- Step 2: Check for Existing Enemy in workspace
                     local targetMob = nil
+                    local enemies = workspace:FindFirstChild("Enemies")
                     
                     if enemies then
                         for _, mob in pairs(enemies:GetChildren()) do
@@ -193,7 +193,7 @@ task.spawn(function()
                         end
                     end
 
-                    -- Step 3: Attack Mob OR fly to Waypoint to Trigger Spawn
+                    -- Step 3: Attack Enemy IF found, OTHERWISE fly directly to Waypoint
                     if targetMob then
                         local mobPos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 9, 0)
                         flyTo(mobPos)
@@ -202,8 +202,9 @@ task.spawn(function()
                         VirtualUser:CaptureController()
                         VirtualUser:ClickButton1(Vector2.new(500, 500))
                     else
-                        -- Teleport to Mob Waypoint to force game spawn activation
-                        flyTo(questInfo.MobWaypoint * CFrame.new(0, 10, 0))
+                        -- Forced Fly to Spawn Waypoint (Hover 10 studs above waypoint)
+                        local spawnArea = questInfo.MobWaypoint * CFrame.new(0, 10, 0)
+                        flyTo(spawnArea)
                     end
                 end
             end)
