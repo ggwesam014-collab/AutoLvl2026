@@ -1,84 +1,50 @@
 -- =================================================================
--- Redz Hub Style - Auto Farm Level System (Complete Script)
+-- Redz Hub - Auto Farm Level (Blox Fruits Update 30 / Level 2800)
 -- =================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
+local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- متغيرة التحكم في التشغيل
 _G.AutoFarm = false
 
 -- =================================================================
--- 1. جدول جميع مهام البحار الثلاثة (Quests Data)
+-- 1. جدول مهام التحديث 30 (Up to Level 2800)
 -- =================================================================
 local QuestsData = {
-    ["FirstSea"] = {
-        {MinLevel = 1, MaxLevel = 14, QuestName = "BanditQuest1", QuestNPC = CFrame.new(1059, 16, 1549), EnemyName = "Bandit", EnemyCFrame = CFrame.new(1145, 16, 1634)},
-        {MinLevel = 15, MaxLevel = 29, QuestName = "JungleQuest", QuestNPC = CFrame.new(-1598, 36, 153), EnemyName = "Monkey", EnemyCFrame = CFrame.new(-1618, 21, 141)},
-        {MinLevel = 30, MaxLevel = 39, QuestName = "PirateQuest", QuestNPC = CFrame.new(-1140, 4, 3828), EnemyName = "Pirate", EnemyCFrame = CFrame.new(-1215, 4, 3915)},
-        {MinLevel = 40, MaxLevel = 59, QuestName = "DesertQuest", QuestNPC = CFrame.new(896, 6, 4388), EnemyName = "Desert Bandit", EnemyCFrame = CFrame.new(932, 6, 4485)},
-        {MinLevel = 60, MaxLevel = 89, QuestName = "SnowQuest", QuestNPC = CFrame.new(1386, 87, -1298), EnemyName = "Snow Bandit", EnemyCFrame = CFrame.new(1285, 105, -1342)},
-        {MinLevel = 90, MaxLevel = 119, QuestName = "MarineQuest2", QuestNPC = CFrame.new(-5035, 28, 4322), EnemyName = "Chief Marine", EnemyCFrame = CFrame.new(-4810, 21, 4295)},
-        {MinLevel = 120, MaxLevel = 149, QuestName = "SkyQuest", QuestNPC = CFrame.new(-4842, 717, -2623), EnemyName = "Sky Bandit", EnemyCFrame = CFrame.new(-4975, 278, -2890)},
-        {MinLevel = 150, MaxLevel = 189, QuestName = "PrisonerQuest", QuestNPC = CFrame.new(5308, 1, 475), EnemyName = "Prisoner", EnemyCFrame = CFrame.new(5408, 1, 475)},
-        {MinLevel = 190, MaxLevel = 249, QuestName = "ColosseumQuest", QuestNPC = CFrame.new(-1580, 7, -2982), EnemyName = "Toga Warrior", EnemyCFrame = CFrame.new(-1800, 7, -2982)},
-        {MinLevel = 250, MaxLevel = 299, QuestName = "MagmaQuest", QuestNPC = CFrame.new(-5313, 12, 8515), EnemyName = "Military Soldier", EnemyCFrame = CFrame.new(-5400, 12, 8515)},
-        {MinLevel = 300, MaxLevel = 374, QuestName = "FishmanQuest", QuestNPC = CFrame.new(61163, 18, 1569), EnemyName = "Fishman Warrior", EnemyCFrame = CFrame.new(61000, 18, 1500)},
-        {MinLevel = 375, MaxLevel = 449, QuestName = "SkyExp1Quest", QuestNPC = CFrame.new(-7861, 5545, -380), EnemyName = "God's Guard", EnemyCFrame = CFrame.new(-7700, 5545, -380)},
-        {MinLevel = 450, MaxLevel = 524, QuestName = "SkyExp2Quest", QuestNPC = CFrame.new(-7906, 5635, -2470), EnemyName = "Shandorian Warrior", EnemyCFrame = CFrame.new(-7800, 5635, -2470)},
-        {MinLevel = 525, MaxLevel = 624, QuestName = "FountainQuest", QuestNPC = CFrame.new(5259, 38, 4050), EnemyName = "Galley Pirate", EnemyCFrame = CFrame.new(5350, 38, 4050)},
-        {MinLevel = 625, MaxLevel = 699, QuestName = "FountainQuest2", QuestNPC = CFrame.new(5259, 38, 4050), EnemyName = "Galley Captain", EnemyCFrame = CFrame.new(5500, 38, 4050)}
-    },
-    ["SecondSea"] = {
-        {MinLevel = 700, MaxLevel = 774, QuestName = "Area1Quest", QuestNPC = CFrame.new(-425, 73, 1837), EnemyName = "Raider", EnemyCFrame = CFrame.new(-700, 73, 2300)},
-        {MinLevel = 775, MaxLevel = 874, QuestName = "Area2Quest", QuestNPC = CFrame.new(638, 73, 918), EnemyName = "Mercenary", EnemyCFrame = CFrame.new(900, 73, 918)},
-        {MinLevel = 875, MaxLevel = 949, QuestName = "SwanQuest", QuestNPC = CFrame.new(913, 120, 1312), EnemyName = "Swan Pirate", EnemyCFrame = CFrame.new(1100, 120, 1312)},
-        {MinLevel = 950, MaxLevel = 999, QuestName = "ZombieQuest", QuestNPC = CFrame.new(-5492, 48, -794), EnemyName = "Zombie", EnemyCFrame = CFrame.new(-5600, 48, -794)},
-        {MinLevel = 1000, MaxLevel = 1099, QuestName = "SnowMountainQuest", QuestNPC = CFrame.new(608, 401, -5371), EnemyName = "Snow Trooper", EnemyCFrame = CFrame.new(500, 401, -5371)},
-        {MinLevel = 1100, MaxLevel = 1174, QuestName = "IceSideQuest", QuestNPC = CFrame.new(-6060, 15, -4900), EnemyName = "Lab Subordinate", EnemyCFrame = CFrame.new(-5900, 15, -4900)},
-        {MinLevel = 1175, MaxLevel = 1249, QuestName = "FireSideQuest", QuestNPC = CFrame.new(-5430, 15, -5294), EnemyName = "Magma Ninja", EnemyCFrame = CFrame.new(-5300, 15, -5294)},
-        {MinLevel = 1250, MaxLevel = 1349, QuestName = "ShipQuest1", QuestNPC = CFrame.new(1038, 125, 32911), EnemyName = "Ship Officer", EnemyCFrame = CFrame.new(1150, 125, 32911)},
-        {MinLevel = 1350, MaxLevel = 1424, QuestName = "FrostQuest", QuestNPC = CFrame.new(5667, 28, -6480), EnemyName = "Arctic Warrior", EnemyCFrame = CFrame.new(5800, 28, -6480)},
-        {MinLevel = 1425, MaxLevel = 1499, QuestName = "ForgottenQuest", QuestNPC = CFrame.new(-3054, 236, -10148), EnemyName = "Sea Soldier", EnemyCFrame = CFrame.new(-3200, 236, -10148)}
-    },
     ["ThirdSea"] = {
-        {MinLevel = 1500, MaxLevel = 1574, QuestName = "PiratePortQuest", QuestNPC = CFrame.new(-290, 44, 5580), EnemyName = "Pirate Millionaire", EnemyCFrame = CFrame.new(-400, 44, 5580)},
-        {MinLevel = 1575, MaxLevel = 1699, QuestName = "AmazonQuest", QuestNPC = CFrame.new(5833, 51, -1100), EnemyName = "Pistol Billionaire", EnemyCFrame = CFrame.new(5950, 51, -1100)},
-        {MinLevel = 1700, MaxLevel = 1799, QuestName = "MarineTreeQuest", QuestNPC = CFrame.new(2180, 29, -6740), EnemyName = "Marine Commodore", EnemyCFrame = CFrame.new(2300, 29, -6740)},
-        {MinLevel = 1800, MaxLevel = 1899, QuestName = "FloatingTurtleQuest", QuestNPC = CFrame.new(-13274, 332, -7630), EnemyName = "Fishman Raider", EnemyCFrame = CFrame.new(-13400, 332, -7630)},
-        {MinLevel = 1900, MaxLevel = 1999, QuestName = "CastleQuest", QuestNPC = CFrame.new(-5030, 314, -2940), EnemyName = "Corporal", EnemyCFrame = CFrame.new(-5150, 314, -2940)},
-        {MinLevel = 2000, MaxLevel = 2074, QuestName = "HauntedQuest1", QuestNPC = CFrame.new(-9515, 142, 5520), EnemyName = "Reborn Skeleton", EnemyCFrame = CFrame.new(-9650, 142, 5520)},
-        {MinLevel = 2075, MaxLevel = 2199, QuestName = "HauntedQuest2", QuestNPC = CFrame.new(-9515, 142, 5520), EnemyName = "Demonic Soul", EnemyCFrame = CFrame.new(-9800, 142, 5520)},
         {MinLevel = 2200, MaxLevel = 2299, QuestName = "PeanutQuest", QuestNPC = CFrame.new(-2100, 38, -10190), EnemyName = "Peanut Scout", EnemyCFrame = CFrame.new(-2200, 38, -10190)},
-        {MinLevel = 2300, MaxLevel = 2550, QuestName = "IceCreamQuest", QuestNPC = CFrame.new(-820, 65, -10960), EnemyName = "Ice Cream Chef", EnemyCFrame = CFrame.new(-950, 65, -10960)}
+        {MinLevel = 2300, MaxLevel = 2399, QuestName = "IceCreamQuest", QuestNPC = CFrame.new(-820, 65, -10960), EnemyName = "Ice Cream Chef", EnemyCFrame = CFrame.new(-950, 65, -10960)},
+        {MinLevel = 2400, MaxLevel = 2474, QuestName = "TikiQuest1", QuestNPC = CFrame.new(-16234, 9, 483), EnemyName = "Isle Outlaw", EnemyCFrame = CFrame.new(-16000, 20, 600)},
+        {MinLevel = 2475, MaxLevel = 2599, QuestName = "TikiQuest2", QuestNPC = CFrame.new(-16234, 9, 483), EnemyName = "Island Boy", EnemyCFrame = CFrame.new(-16400, 20, 800)},
+        -- مهام التحديث 30 الجديد (Level 2600 - 2800)
+        {MinLevel = 2600, MaxLevel = 2699, QuestName = "MagnetIsleQuest1", QuestNPC = CFrame.new(-17100, 35, 1200), EnemyName = "Scrap Collector", EnemyCFrame = CFrame.new(-17250, 40, 1350)},
+        {MinLevel = 2700, MaxLevel = 2800, QuestName = "MagnetIsleQuest2", QuestNPC = CFrame.new(-17100, 35, 1200), EnemyName = "Magnetic Enforcer", EnemyCFrame = CFrame.new(-17400, 40, 1500)}
     }
 }
 
 -- =================================================================
--- 2. Custom Tween System (نظام التنقل السلس والحماية)
+-- 2. Smooth Custom Tween (Anti-Bypass System)
 -- =================================================================
 local function CustomTween(targetCFrame, speed)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     
     local hrp = character.HumanoidRootPart
-    speed = speed or 300
+    speed = speed or 350
 
     local bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.Velocity = Vector3.new(0, 0, 0)
     bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     bodyVelocity.Parent = hrp
 
-    local noclipConnection = RunService.Stepped:Connect(function()
+    local noclip = RunService.Stepped:Connect(function()
         for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end)
 
@@ -95,62 +61,56 @@ local function CustomTween(targetCFrame, speed)
 
     if hrp then hrp.CFrame = targetCFrame end
     bodyVelocity:Destroy()
-    noclipConnection:Disconnect()
+    noclip:Disconnect()
 end
 
 -- =================================================================
--- 3. الدوال التابعة لـ Auto Farm
+-- 3. Fast Attack System (موافق للتحديث 30)
 -- =================================================================
-local function GetCurrentWorld()
-    local placeId = game.PlaceId
-    if placeId == 2753915549 then return "FirstSea"
-    elseif placeId == 4442272183 then return "SecondSea"
-    elseif placeId == 7449423635 then return "ThirdSea"
-    else return "FirstSea" end
-end
-
-local function GetMyQuestData()
-    local level = 1
-    if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
-        level = LocalPlayer.Data.Level.Value
-    end
-    
-    local world = GetCurrentWorld()
-    for _, quest in pairs(QuestsData[world]) do
-        if level >= quest.MinLevel and level <= quest.MaxLevel then
-            return quest
+local function FastAttack()
+    pcall(function()
+        local weapon = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        if weapon then
+            ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterAttack"):FireServer(0)
+            ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit"):FireServer(weapon)
         end
-    end
-    return nil
+    end)
 end
 
 -- =================================================================
 -- 4. الحلقة الرئيسية لـ Auto Farm
 -- =================================================================
+local function GetMyQuestData()
+    local level = LocalPlayer.Data.Level.Value
+    for _, quest in pairs(QuestsData["ThirdSea"]) do
+        if level >= quest.MinLevel and level <= quest.MaxLevel then
+            return quest
+        end
+    end
+    return QuestsData["ThirdSea"][#QuestsData["ThirdSea"]]
+end
+
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.05)
         if _G.AutoFarm then
             local questData = GetMyQuestData()
             if questData then
-                -- 1. التأكد من أخذ المهمة
-                local hasQuest = LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Quest") and LocalPlayer.PlayerGui.Main.Quest.Visible
+                local myGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+                local hasQuest = myGui and myGui:FindFirstChild("Quest") and myGui.Quest.Visible
                 
                 if not hasQuest then
-                    CustomTween(questData.QuestNPC * CFrame.new(0, 0, 3), 300)
-                    task.wait(0.5)
-                    pcall(function()
-                        ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", questData.QuestName, 1)
-                    end)
+                    CustomTween(questData.QuestNPC * CFrame.new(0, 0, 3), 350)
+                    task.wait(0.3)
+                    CommF:InvokeServer("StartQuest", questData.QuestName, 1)
                 else
-                    -- 2. الانتقال إلى مكان الوحوش والهجوم
-                    CustomTween(questData.EnemyCFrame * CFrame.new(0, 10, 0), 300)
-                    
-                    -- محاكاة الضرب والتجميع (مثال تجريبي)
-                    pcall(function()
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                    end)
+                    local targetPos = questData.EnemyCFrame * CFrame.new(0, 9, 0)
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - targetPos.Position).Magnitude > 15 then
+                        CustomTween(targetPos, 350)
+                    else
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = targetPos
+                        FastAttack()
+                    end
                 end
             end
         end
@@ -158,95 +118,69 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 5. واجهة المستخدم (Redz Hub Style UI)
+-- 5. UI Redz Hub
 -- =================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RedzHubTest"
+ScreenGui.Name = "RedzHubUpdate30"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = gethui and gethui() or CoreGui
 
--- اختيار المجلد المناسب للحفظ
-if gethui then
-    ScreenGui.Parent = gethui()
-elseif syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = CoreGui
-else
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- Frame الرئيسي للواجهة
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -150, 0.4, -90)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BorderSizePixel = 0
+MainFrame.Size = UDim2.new(0, 290, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -145, 0.4, -80)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = MainFrame
 
--- عنوان الواجهة
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.Text = "Redz Hub - Auto Farm Level"
-Title.TextColor3 = Color3.fromRGB(255, 60, 60)
-Title.TextSize = 16
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "Redz Hub - Update 30 [Lvl 2800]"
+Title.TextColor3 = Color3.fromRGB(255, 50, 50)
+Title.TextSize = 14
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 8)
-TitleCorner.Parent = Title
-
--- زر تفعيل/إيقاف Auto Farm
-local ToggleFarmBtn = Instance.new("TextButton")
-ToggleFarmBtn.Size = UDim2.new(0.8, 0, 0, 45)
-ToggleFarmBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
-ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-ToggleFarmBtn.Text = "Auto Farm: OFF"
-ToggleFarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleFarmBtn.TextSize = 16
-ToggleFarmBtn.Font = Enum.Font.SourceSansBold
-ToggleFarmBtn.Parent = MainFrame
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0.85, 0, 0, 45)
+ToggleBtn.Position = UDim2.new(0.075, 0, 0.45, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+ToggleBtn.Text = "Auto Farm: OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 16
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Parent = MainFrame
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleFarmBtn
+BtnCorner.CornerRadius = UDim.new(0, 8)
+BtnCorner.Parent = ToggleBtn
 
-ToggleFarmBtn.MouseButton1Click:Connect(function()
+ToggleBtn.MouseButton1Click:Connect(function()
     _G.AutoFarm = not _G.AutoFarm
-    if _G.AutoFarm then
-        ToggleFarmBtn.Text = "Auto Farm: ON"
-        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-    else
-        ToggleFarmBtn.Text = "Auto Farm: OFF"
-        ToggleFarmBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    end
+    ToggleBtn.Text = _G.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
+    ToggleBtn.BackgroundColor3 = _G.AutoFarm and Color3.fromRGB(30, 180, 80) or Color3.fromRGB(180, 30, 30)
 end)
 
--- =================================================================
--- 6. زر إخفاء وإظهار الواجهة (Toggle UI Button)
--- =================================================================
-local ToggleUIBtn = Instance.new("TextButton")
-ToggleUIBtn.Size = UDim2.new(0, 50, 0, 50)
-ToggleUIBtn.Position = UDim2.new(0, 10, 0.5, -25)
-ToggleUIBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ToggleUIBtn.Text = "REDZ"
-ToggleUIBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
-ToggleUIBtn.TextSize = 14
-ToggleUIBtn.Font = Enum.Font.SourceSansBold
-ToggleUIBtn.Active = true
-ToggleUIBtn.Draggable = true
-ToggleUIBtn.Parent = ScreenGui
+local ToggleUI = Instance.new("TextButton")
+ToggleUI.Size = UDim2.new(0, 45, 0, 45)
+ToggleUI.Position = UDim2.new(0, 15, 0.5, -22)
+ToggleUI.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+ToggleUI.Text = "REDZ"
+ToggleUI.TextColor3 = Color3.fromRGB(255, 50, 50)
+ToggleUI.TextSize = 12
+ToggleUI.Font = Enum.Font.SourceSansBold
+ToggleUI.Active = true
+ToggleUI.Draggable = true
+ToggleUI.Parent = ScreenGui
 
-local ToggleUICorner = Instance.new("UICorner")
-ToggleUICorner.CornerRadius = UDim.new(1, 0) -- دائري
-ToggleUICorner.Parent = ToggleUIBtn
+local UICorner2 = Instance.new("UICorner")
+UICorner2.CornerRadius = UDim.new(1, 0)
+UICorner2.Parent = ToggleUI
 
-ToggleUIBtn.MouseButton1Click:Connect(function()
+ToggleUI.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
