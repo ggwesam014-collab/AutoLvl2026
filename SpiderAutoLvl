@@ -1,22 +1,22 @@
--- تحميل مكتبة الواجهات Rayfield
+-- Spider Hub | By: SpiDev
+-- Auto Level Script (Max Level 2800)
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Auto Level | Blox Fruits",
-   LoadingTitle = "جاري تحميل السكربت...",
-   LoadingSubtitle = "by Assistant",
+   Name = "Spider Hub | Blox Fruits",
+   LoadingTitle = "Spider Hub Loading...",
+   LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
 })
 
 local Tab = Window:CreateTab("Main Farm", 4483362458)
 
--- متغيرات التحكم
 _G.AutoFarm = false
 _G.SelectedWeapon = "Melee"
 
--- زر التفعيل والتعطيل
 local Toggle = Tab:CreateToggle({
-   Name = "تفعيل Auto Level",
+   Name = "Auto Level Farm",
    CurrentValue = false,
    Flag = "AutoLevelToggle",
    Callback = function(Value)
@@ -24,9 +24,8 @@ local Toggle = Tab:CreateToggle({
    end,
 })
 
--- اختيار السلاح
 local Dropdown = Tab:CreateDropdown({
-   Name = "اختر السلاح",
+   Name = "Select Weapon",
    Options = {"Melee", "Sword", "Blox Fruit"},
    CurrentOption = {"Melee"},
    MultipleOptions = false,
@@ -36,30 +35,67 @@ local Dropdown = Tab:CreateDropdown({
    end,
 })
 
--- الخدمات الأساسية
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
 
--- دالة التحريك (Tween)
-local function moveTo(targetCFrame)
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+-- Auto Equip Weapon
+local function equipWeapon()
+    local backpack = LocalPlayer.Backpack
+    local character = LocalPlayer.Character
+    if not character then return end
     
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = 300
-    local tween = TweenService:Create(hrp, TweenInfo.new(distance / speed, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
-    tween:Play()
-    return tween
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            if tool.ToolTip == _G.SelectedWeapon or tool.Name:find(_G.SelectedWeapon) or (_G.SelectedWeapon == "Melee" and tool.ToolTip == "Melee") then
+                character.Humanoid:EquipTool(tool)
+                break
+            end
+        end
+    end
 end
 
--- قاعدة بيانات المهام للعوالم الثلاثة
+-- Noclip to prevent anti-cheat rubberband
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoFarm and LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- Tween movement function
+local currentTween = nil
+local function bypassTween(targetCFrame)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+    
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    if distance < 10 then 
+        hrp.CFrame = targetCFrame
+        return 
+    end
+    
+    local speed = 320
+    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+    
+    if currentTween then currentTween:Cancel() end
+    currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    currentTween:Play()
+end
+
+-- Full Quests Database (1 to 2800 Level)
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
-    -- World 1 (First Sea)
+    -- First Sea (1 - 700)
     if level >= 1 and level < 15 then
         return {QuestName = "BanditQuest1", QuestNum = 1, MobName = "Bandit", NpcCFrame = CFrame.new(1059, 16, 1548)}
     elseif level >= 15 and level < 30 then
@@ -87,7 +123,7 @@ local function getQuestData()
     elseif level >= 625 and level < 700 then
         return {QuestName = "FountainQuest", QuestNum = 1, MobName = "Corporal", NpcCFrame = CFrame.new(5259, 38, 4050)}
     
-    -- World 2 (Second Sea)
+    -- Second Sea (700 - 1500)
     elseif level >= 700 and level < 775 then
         return {QuestName = "Area1Quest", QuestNum = 1, MobName = "Raider", NpcCFrame = CFrame.new(-425, 73, 1836)}
     elseif level >= 775 and level < 875 then
@@ -105,7 +141,7 @@ local function getQuestData()
     elseif level >= 1425 and level < 1500 then
         return {QuestName = "WaterFighterQuest", QuestNum = 1, MobName = "Water Fighter", NpcCFrame = CFrame.new(2888, 14, -5283)}
         
-    -- World 3 (Third Sea)
+    -- Third Sea (1500 - 2800)
     elseif level >= 1500 and level < 1575 then
         return {QuestName = "PiratePortQuest", QuestNum = 1, MobName = "Pirate Millionaire", NpcCFrame = CFrame.new(-290, 44, 5580)}
     elseif level >= 1575 and level < 1700 then
@@ -120,12 +156,14 @@ local function getQuestData()
         return {QuestName = "PeanutQuest", QuestNum = 1, MobName = "Peanut Scout", NpcCFrame = CFrame.new(-2124, 38, -10237)}
     elseif level >= 2200 and level < 2450 then
         return {QuestName = "IceCreamQuest1", QuestNum = 1, MobName = "Ice Cream Chef", NpcCFrame = CFrame.new(-822, 66, -10965)}
-    elseif level >= 2450 then
+    elseif level >= 2450 and level < 2600 then
         return {QuestName = "ChocolatierQuest", QuestNum = 1, MobName = "Chocolate Bar Battler", NpcCFrame = CFrame.new(151, 24, -12774)}
+    elseif level >= 2600 and level <= 2800 then
+        return {QuestName = "CandyQuest1", QuestNum = 1, MobName = "Candy Rebel", NpcCFrame = CFrame.new(-1148, 14, -14446)}
     end
 end
 
--- حلقة التقدّم والتلفيل
+-- Main Loop
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoFarm then
@@ -133,36 +171,41 @@ task.spawn(function()
                 local questInfo = getQuestData()
                 if not questInfo then return end
 
-                local questGui = LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Quest")
+                local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
+                local questGui = mainGui and mainGui:FindFirstChild("Quest")
                 
-                -- إذا لم تكن هناك مهمة قائمة، اذهب لاستلامها
+                -- Check if player has an active quest
                 if not questGui or not questGui.Visible then
-                    moveTo(questInfo.NpcCFrame)
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude < 15 then
+                    bypassTween(questInfo.NpcCFrame)
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude <= 15 then
                         local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
                         if commF then
                             commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
                         end
                     end
                 else
-                    -- البحث عن الوحش والمهاجمة
+                    -- Search and attack target mob
                     local enemies = workspace:FindFirstChild("Enemies")
+                    local targetMob = nil
+                    
                     if enemies then
-                        local mobFound = false
                         for _, mob in pairs(enemies:GetChildren()) do
                             if mob.Name == questInfo.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
-                                mobFound = true
-                                -- التموضع فوق الوحش بمقدار 10 خطوات للهجوم بأمان
-                                moveTo(mob.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                                
-                                -- محاكاة الضرب
-                                local gameTool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-                                if gameTool then
-                                    gameTool:Activate()
-                                end
+                                targetMob = mob
                                 break
                             end
                         end
+                    end
+
+                    if targetMob then
+                        -- Hover above mob (8 units)
+                        local mobPos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0)
+                        bypassTween(mobPos)
+                        
+                        -- Equip weapon and attack
+                        equipWeapon()
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(500, 500))
                     end
                 end
             end)
