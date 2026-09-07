@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Fixed Movement & Auto Level (Level 1 to 2800)
+-- Auto Level with Mob Spawn Waypoints (Sea 1, 2, 3 - Level 2800)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -56,7 +56,7 @@ local function equipWeapon()
     end
 end
 
--- Noclip & No Gravity System
+-- Noclip System
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -69,7 +69,7 @@ task.spawn(function()
     end
 end)
 
--- Fly System to prevent Rubberband
+-- Fly Movement System
 local function flyTo(targetCFrame)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -78,7 +78,7 @@ local function flyTo(targetCFrame)
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
     
     if distance > 10 then
-        local speed = 300
+        local speed = 310
         local direction = (targetCFrame.Position - hrp.Position).Unit
         hrp.CFrame = hrp.CFrame + (direction * (speed * task.wait()))
     else
@@ -86,79 +86,79 @@ local function flyTo(targetCFrame)
     end
 end
 
--- Full Quests Database (1 to 2800 Level)
+-- Database: Quests, Mob Names, NPC Coordinates, and Mob Spawn Waypoints
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
-    -- First Sea (1 - 700)
+    -- FIRST SEA (1 - 700)
     if level >= 1 and level < 15 then
-        return {QuestName = "BanditQuest1", QuestNum = 1, MobName = "Bandit", NpcCFrame = CFrame.new(1059, 16, 1548)}
+        return {QuestName = "BanditQuest1", QuestNum = 1, MobName = "Bandit", NpcCFrame = CFrame.new(1059, 16, 1548), MobWaypoint = CFrame.new(1145, 17, 1634)}
     elseif level >= 15 and level < 30 then
-        return {QuestName = "JungleQuest", QuestNum = 1, MobName = "Monkey", NpcCFrame = CFrame.new(-1598, 36, 153)}
+        return {QuestName = "JungleQuest", QuestNum = 1, MobName = "Monkey", NpcCFrame = CFrame.new(-1598, 36, 153), MobWaypoint = CFrame.new(-1448, 23, 208)}
     elseif level >= 30 and level < 60 then
-        return {QuestName = "JungleQuest", QuestNum = 2, MobName = "Gorilla", NpcCFrame = CFrame.new(-1598, 36, 153)}
+        return {QuestName = "JungleQuest", QuestNum = 2, MobName = "Gorilla", NpcCFrame = CFrame.new(-1598, 36, 153), MobWaypoint = CFrame.new(-1237, 6, -486)}
     elseif level >= 60 and level < 90 then
-        return {QuestName = "BuggyQuest1", QuestNum = 1, MobName = "Pirate", NpcCFrame = CFrame.new(-1141, 4, 3832)}
+        return {QuestName = "BuggyQuest1", QuestNum = 1, MobName = "Pirate", NpcCFrame = CFrame.new(-1141, 4, 3832), MobWaypoint = CFrame.new(-1215, 4, 3915)}
     elseif level >= 90 and level < 120 then
-        return {QuestName = "DesertQuest", QuestNum = 1, MobName = "Desert Bandit", NpcCFrame = CFrame.new(894, 6, 4386)}
+        return {QuestName = "DesertQuest", QuestNum = 1, MobName = "Desert Bandit", NpcCFrame = CFrame.new(894, 6, 4386), MobWaypoint = CFrame.new(982, 6, 4435)}
     elseif level >= 120 and level < 150 then
-        return {QuestName = "SnowQuest", QuestNum = 1, MobName = "Snow Bandit", NpcCFrame = CFrame.new(1385, 87, -1298)}
+        return {QuestName = "SnowQuest", QuestNum = 1, MobName = "Snow Bandit", NpcCFrame = CFrame.new(1385, 87, -1298), MobWaypoint = CFrame.new(1287, 105, -1342)}
     elseif level >= 150 and level < 190 then
-        return {QuestName = "MarineQuest2", QuestNum = 1, MobName = "Chief Petty Officer", NpcCFrame = CFrame.new(-5035, 20, 4324)}
+        return {QuestName = "MarineQuest2", QuestNum = 1, MobName = "Chief Petty Officer", NpcCFrame = CFrame.new(-5035, 20, 4324), MobWaypoint = CFrame.new(-4850, 21, 4260)}
     elseif level >= 190 and level < 275 then
-        return {QuestName = "SkyQuest", QuestNum = 1, MobName = "Sky Bandit", NpcCFrame = CFrame.new(-4842, 717, -2623)}
+        return {QuestName = "SkyQuest", QuestNum = 1, MobName = "Sky Bandit", NpcCFrame = CFrame.new(-4842, 717, -2623), MobWaypoint = CFrame.new(-4975, 718, -2885)}
     elseif level >= 275 and level < 375 then
-        return {QuestName = "ColosseumQuest", QuestNum = 1, MobName = "Toga Warrior", NpcCFrame = CFrame.new(-1580, 7, -2982)}
+        return {QuestName = "ColosseumQuest", QuestNum = 1, MobName = "Toga Warrior", NpcCFrame = CFrame.new(-1580, 7, -2982), MobWaypoint = CFrame.new(-1805, 7, -2740)}
     elseif level >= 375 and level < 450 then
-        return {QuestName = "MagmaQuest", QuestNum = 1, MobName = "Military Soldier", NpcCFrame = CFrame.new(-5313, 12, 8515)}
+        return {QuestName = "MagmaQuest", QuestNum = 1, MobName = "Military Soldier", NpcCFrame = CFrame.new(-5313, 12, 8515), MobWaypoint = CFrame.new(-5400, 11, 8440)}
     elseif level >= 450 and level < 525 then
-        return {QuestName = "FishmanQuest", QuestNum = 1, MobName = "Fishman Warrior", NpcCFrame = CFrame.new(61122, 18, 1569)}
+        return {QuestName = "FishmanQuest", QuestNum = 1, MobName = "Fishman Warrior", NpcCFrame = CFrame.new(61122, 18, 1569), MobWaypoint = CFrame.new(60800, 18, 1500)}
     elseif level >= 525 and level < 625 then
-        return {QuestName = "SkyQuest2", QuestNum = 1, MobName = "God's Guard", NpcCFrame = CFrame.new(-7906, 5611, -2280)}
+        return {QuestName = "SkyQuest2", QuestNum = 1, MobName = "God's Guard", NpcCFrame = CFrame.new(-7906, 5611, -2280), MobWaypoint = CFrame.new(-7725, 5607, -2290)}
     elseif level >= 625 and level < 700 then
-        return {QuestName = "FountainQuest", QuestNum = 1, MobName = "Corporal", NpcCFrame = CFrame.new(5259, 38, 4050)}
-    
-    -- Second Sea (700 - 1500)
+        return {QuestName = "FountainQuest", QuestNum = 1, MobName = "Corporal", NpcCFrame = CFrame.new(5259, 38, 4050), MobWaypoint = CFrame.new(5050, 38, 3970)}
+
+    -- SECOND SEA (700 - 1500)
     elseif level >= 700 and level < 775 then
-        return {QuestName = "Area1Quest", QuestNum = 1, MobName = "Raider", NpcCFrame = CFrame.new(-425, 73, 1836)}
+        return {QuestName = "Area1Quest", QuestNum = 1, MobName = "Raider", NpcCFrame = CFrame.new(-425, 73, 1836), MobWaypoint = CFrame.new(-720, 78, 2340)}
     elseif level >= 775 and level < 875 then
-        return {QuestName = "Area2Quest", QuestNum = 1, MobName = "Mercenary", NpcCFrame = CFrame.new(638, 73, 918)}
+        return {QuestName = "Area2Quest", QuestNum = 1, MobName = "Mercenary", NpcCFrame = CFrame.new(638, 73, 918), MobWaypoint = CFrame.new(890, 73, 1370)}
     elseif level >= 875 and level < 1000 then
-        return {QuestName = "SwanQuest", QuestNum = 1, MobName = "Swan Pirate", NpcCFrame = CFrame.new(878, 122, 1235)}
+        return {QuestName = "SwanQuest", QuestNum = 1, MobName = "Swan Pirate", NpcCFrame = CFrame.new(878, 122, 1235), MobWaypoint = CFrame.new(1080, 122, 1210)}
     elseif level >= 1000 and level < 1125 then
-        return {QuestName = "ZombieQuest", QuestNum = 1, MobName = "Zombie", NpcCFrame = CFrame.new(-5492, 48, -795)}
+        return {QuestName = "ZombieQuest", QuestNum = 1, MobName = "Zombie", NpcCFrame = CFrame.new(-5492, 48, -795), MobWaypoint = CFrame.new(-5630, 48, -720)}
     elseif level >= 1125 and level < 1250 then
-        return {QuestName = "SnowMountainQuest", QuestNum = 1, MobName = "Snow Trooper", NpcCFrame = CFrame.new(609, 401, -5372)}
+        return {QuestName = "SnowMountainQuest", QuestNum = 1, MobName = "Snow Trooper", NpcCFrame = CFrame.new(609, 401, -5372), MobWaypoint = CFrame.new(480, 401, -5300)}
     elseif level >= 1250 and level < 1350 then
-        return {QuestName = "IceSideQuest", QuestNum = 1, MobName = "Lab Subordinate", NpcCFrame = CFrame.new(-6064, 16, -4927)}
+        return {QuestName = "IceSideQuest", QuestNum = 1, MobName = "Lab Subordinate", NpcCFrame = CFrame.new(-6064, 16, -4927), MobWaypoint = CFrame.new(-5850, 16, -4830)}
     elseif level >= 1350 and level < 1425 then
-        return {QuestName = "FireSideQuest", QuestNum = 1, MobName = "Magma Ninja", NpcCFrame = CFrame.new(-5430, 16, -5296)}
+        return {QuestName = "FireSideQuest", QuestNum = 1, MobName = "Magma Ninja", NpcCFrame = CFrame.new(-5430, 16, -5296), MobWaypoint = CFrame.new(-5480, 16, -5520)}
     elseif level >= 1425 and level < 1500 then
-        return {QuestName = "WaterFighterQuest", QuestNum = 1, MobName = "Water Fighter", NpcCFrame = CFrame.new(2888, 14, -5283)}
-        
-    -- Third Sea (1500 - 2800)
+        return {QuestName = "WaterFighterQuest", QuestNum = 1, MobName = "Water Fighter", NpcCFrame = CFrame.new(2888, 14, -5283), MobWaypoint = CFrame.new(3100, 14, -5350)}
+
+    -- THIRD SEA (1500 - 2800)
     elseif level >= 1500 and level < 1575 then
-        return {QuestName = "PiratePortQuest", QuestNum = 1, MobName = "Pirate Millionaire", NpcCFrame = CFrame.new(-290, 44, 5580)}
+        return {QuestName = "PiratePortQuest", QuestNum = 1, MobName = "Pirate Millionaire", NpcCFrame = CFrame.new(-290, 44, 5580), MobWaypoint = CFrame.new(-380, 44, 5500)}
     elseif level >= 1575 and level < 1700 then
-        return {QuestName = "AmazonQuest", QuestNum = 1, MobName = "Pistol Billionaire", NpcCFrame = CFrame.new(5833, 52, -1100)}
+        return {QuestName = "AmazonQuest", QuestNum = 1, MobName = "Pistol Billionaire", NpcCFrame = CFrame.new(5833, 52, -1100), MobWaypoint = CFrame.new(5400, 70, -1050)}
     elseif level >= 1700 and level < 1825 then
-        return {QuestName = "MarineTreeQuest", QuestNum = 1, MobName = "Marine Commodore", NpcCFrame = CFrame.new(2182, 29, -6737)}
+        return {QuestName = "MarineTreeQuest", QuestNum = 1, MobName = "Marine Commodore", NpcCFrame = CFrame.new(2182, 29, -6737), MobWaypoint = CFrame.new(2450, 73, -6780)}
     elseif level >= 1825 and level < 1975 then
-        return {QuestName = "DeepForestIslandQuest", QuestNum = 1, MobName = "Forest Pirate", NpcCFrame = CFrame.new(-13233, 332, -7626)}
+        return {QuestName = "DeepForestIslandQuest", QuestNum = 1, MobName = "Forest Pirate", NpcCFrame = CFrame.new(-13233, 332, -7626), MobWaypoint = CFrame.new(-13450, 332, -7900)}
     elseif level >= 1975 and level < 2075 then
-        return {QuestName = "HauntedQuest1", QuestNum = 1, MobName = "Reborn Skeleton", NpcCFrame = CFrame.new(-9482, 142, 5565)}
+        return {QuestName = "HauntedQuest1", QuestNum = 1, MobName = "Reborn Skeleton", NpcCFrame = CFrame.new(-9482, 142, 5565), MobWaypoint = CFrame.new(-8800, 142, 5530)}
     elseif level >= 2075 and level < 2200 then
-        return {QuestName = "PeanutQuest", QuestNum = 1, MobName = "Peanut Scout", NpcCFrame = CFrame.new(-2124, 38, -10237)}
+        return {QuestName = "PeanutQuest", QuestNum = 1, MobName = "Peanut Scout", NpcCFrame = CFrame.new(-2124, 38, -10237), MobWaypoint = CFrame.new(-2020, 38, -10350)}
     elseif level >= 2200 and level < 2450 then
-        return {QuestName = "IceCreamQuest1", QuestNum = 1, MobName = "Ice Cream Chef", NpcCFrame = CFrame.new(-822, 66, -10965)}
+        return {QuestName = "IceCreamQuest1", QuestNum = 1, MobName = "Ice Cream Chef", NpcCFrame = CFrame.new(-822, 66, -10965), MobWaypoint = CFrame.new(-650, 66, -11100)}
     elseif level >= 2450 and level < 2600 then
-        return {QuestName = "ChocolatierQuest", QuestNum = 1, MobName = "Chocolate Bar Battler", NpcCFrame = CFrame.new(151, 24, -12774)}
+        return {QuestName = "ChocolatierQuest", QuestNum = 1, MobName = "Chocolate Bar Battler", NpcCFrame = CFrame.new(151, 24, -12774), MobWaypoint = CFrame.new(280, 24, -12650)}
     elseif level >= 2600 and level <= 2800 then
-        return {QuestName = "CandyQuest1", QuestNum = 1, MobName = "Candy Rebel", NpcCFrame = CFrame.new(-1148, 14, -14446)}
+        return {QuestName = "CandyQuest1", QuestNum = 1, MobName = "Candy Rebel", NpcCFrame = CFrame.new(-1148, 14, -14446), MobWaypoint = CFrame.new(-1300, 14, -14550)}
     end
 end
 
--- Main Farming Loop
+-- Main Farming Logic
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm then
@@ -169,18 +169,18 @@ task.spawn(function()
                 local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
                 local questGui = mainGui and mainGui:FindFirstChild("Quest")
                 
-                -- Check if quest is active
+                -- Step 1: Take Quest if not active
                 if not questGui or not questGui.Visible then
                     flyTo(questInfo.NpcCFrame)
                     if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude <= 12 then
                         local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
                         if commF then
                             commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
-                            task.wait(0.5) -- Cooldown to confirm quest registration
+                            task.wait(0.5)
                         end
                     end
                 else
-                    -- Find and fight target mob
+                    -- Step 2: Search for spawned Mob
                     local enemies = workspace:FindFirstChild("Enemies")
                     local targetMob = nil
                     
@@ -193,18 +193,17 @@ task.spawn(function()
                         end
                     end
 
+                    -- Step 3: Attack Mob OR fly to Waypoint to Trigger Spawn
                     if targetMob then
-                        -- Hover above mob
                         local mobPos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 9, 0)
                         flyTo(mobPos)
                         
-                        -- Equip weapon & attack
                         equipWeapon()
                         VirtualUser:CaptureController()
                         VirtualUser:ClickButton1(Vector2.new(500, 500))
                     else
-                        -- Teleport to mob spawn area if no active mob found
-                        flyTo(questInfo.NpcCFrame * CFrame.new(0, 30, 50))
+                        -- Teleport to Mob Waypoint to force game spawn activation
+                        flyTo(questInfo.MobWaypoint * CFrame.new(0, 10, 0))
                     end
                 end
             end)
