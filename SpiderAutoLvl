@@ -1,5 +1,5 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Fixed Quest Auto-Level & High Bypass
+-- Spider Hub - { 2.0 } | Fixed Quest Trigger & Anti-Stuck Engine
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 _G.AutoFarm = false
 
 -- =================================================================
--- 1. جدول المهام المحدث لجميع البحار
+-- 1. جدول المهام المحدث
 -- =================================================================
 local QuestsData = {
     ["FirstSea"] = {
@@ -88,71 +88,58 @@ local function GetMyQuestData()
 end
 
 -- =================================================================
--- 2. محرك الطيران ومنع التعليق بالمباني (Safe High-Bypass Engine)
+-- 2. محرك تنقل آمن لمنع التعليق
 -- =================================================================
-local function ResetVelocity(char)
+local function ClearPhysics(char)
     if not char then return end
-    for _, v in pairs(char:GetChildren()) do
-        if v:IsA("BasePart") then
-            v.Velocity = Vector3.new(0, 0, 0)
-            v.RotVelocity = Vector3.new(0, 0, 0)
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+            part.Velocity = Vector3.new(0, 0, 0)
+            part.RotVelocity = Vector3.new(0, 0, 0)
         end
     end
 end
 
-local function MoveToTargetSafe(targetCFrame)
+local function FlyToCFrame(targetCFrame)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
     local hrp = char.HumanoidRootPart
     local dist = (hrp.Position - targetCFrame.Position).Magnitude
 
-    -- تعطيل التصادم مع المباني
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
+    ClearPhysics(char)
 
-    if dist <= 12 then
+    if dist <= 10 then
         hrp.CFrame = targetCFrame
-        ResetVelocity(char)
         return
     end
 
-    -- إذا كانت المسافة جغرافيا بعيدة، نرتفع فوق المباني أولاً
-    if dist > 150 then
-        local skyPos = Vector3.new(hrp.Position.X, hrp.Position.Y + 120, hrp.Position.Z)
-        hrp.CFrame = CFrame.new(skyPos)
+    -- قفزة إلى الأعلى أولاً لعدم الاصطدام بالأرضيات
+    if dist > 80 and math.abs(hrp.Position.Y - targetCFrame.Position.Y) < 30 then
+        hrp.CFrame = hrp.CFrame + Vector3.new(0, 40, 0)
         task.wait(0.05)
     end
 
-    local stepSize = 16
-    local currentPos = hrp.Position
-    local targetPos = targetCFrame.Position
-    local direction = (targetPos - currentPos).Unit
+    local stepSize = 15
     local steps = math.floor(dist / stepSize)
+    local direction = (targetCFrame.Position - hrp.Position).Unit
 
     for i = 1, steps do
         if not _G.AutoFarm or not LocalPlayer.Character then break end
-        
-        currentPos = currentPos + (direction * stepSize)
-        hrp.CFrame = CFrame.new(currentPos, targetPos)
-        ResetVelocity(char)
+        ClearPhysics(char)
+        hrp.CFrame = hrp.CFrame + (direction * stepSize)
         task.wait(0.015)
     end
 
     if _G.AutoFarm and LocalPlayer.Character then
         hrp.CFrame = targetCFrame
-        ResetVelocity(char)
     end
 end
 
 -- =================================================================
--- 3. فحص المهمة والقتال
+-- 3. فحص وقبول المهمة
 -- =================================================================
-local lastQuestTime = 0
-
 local function HasQuestActive()
     local myGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
     if myGui and myGui:FindFirstChild("Quest") then
@@ -185,8 +172,10 @@ local function FastAttack()
 end
 
 -- =================================================================
--- 4. الحلقة الأساسية الذكية
+-- 4. الحلقة الأساسية المصلحة
 -- =================================================================
+local lastQuestAttempt = 0
+
 task.spawn(function()
     while true do
         task.wait(0.05)
@@ -196,7 +185,7 @@ task.spawn(function()
                 local questActive = HasQuestActive()
 
                 if not questActive then
-                    -- الذهاب إلى الـ NPC الصحيح المناسب للفل
+                    -- الذهاب واستلام المهمة المباشرة
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -205,31 +194,33 @@ task.spawn(function()
                         end
                     end
 
-                    MoveToTargetSafe(npcPos * CFrame.new(0, 2, 3))
+                    FlyToCFrame(npcPos * CFrame.new(0, 1, 2))
 
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 15 then
-                        if tick() - lastQuestTime > 1.2 then
-                            lastQuestTime = tick()
+                    local dist = (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude
+                    if dist < 12 then
+                        if tick() - lastQuestAttempt > 0.8 then
+                            lastQuestAttempt = tick()
+                            -- تكرار الطلب لضمان قبوله من السيرفر
                             CommF:InvokeServer("StartQuest", questData.QuestName, 1)
                         end
                     end
                 else
-                    -- الانتقال فوق الوحوش المطلوبة والبدء بالقتل
+                    -- التنقل لمكان الأعداء والبدء في القتل
                     local enemy = GetTargetEnemy(questData.EnemyName)
                     if enemy then
                         local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0)
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
 
-                        if dist > 12 then
-                            MoveToTargetSafe(enemyPos)
+                        if dist > 10 then
+                            FlyToCFrame(enemyPos)
                         else
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
-                            ResetVelocity(LocalPlayer.Character)
+                            ClearPhysics(LocalPlayer.Character)
                             FastAttack()
                         end
                     else
-                        -- إذا كان الوحش ميت ويفرخ، ننتظر فوق نقطته
-                        MoveToTargetSafe(questData.FallbackNPC * CFrame.new(0, 15, 0))
+                        -- إذا كان الأعداء ميتين، ننتظر فوق موقع الإرسال الخاص بهم
+                        FlyToCFrame(questData.FallbackNPC * CFrame.new(0, 20, 0))
                     end
                 end
             end
@@ -318,7 +309,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
         AutoFarmBtn.Text = "Auto Farm Level: OFF"
         AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
         AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-        ResetVelocity(LocalPlayer.Character)
+        ClearPhysics(LocalPlayer.Character)
     end
 end)
 
