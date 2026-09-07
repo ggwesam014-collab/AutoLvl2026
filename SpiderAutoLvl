@@ -1,5 +1,5 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Ultimate Anti-Rubberband & No-Lag Bypass
+-- Spider Hub - { 2.0 } | Fixed Quest Auto-Level & High Bypass
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 _G.AutoFarm = false
 
 -- =================================================================
--- 1. جدول المهام
+-- 1. جدول المهام المحدث لجميع البحار
 -- =================================================================
 local QuestsData = {
     ["FirstSea"] = {
@@ -62,21 +62,33 @@ local function GetCurrentSea()
     if placeId == 2753915549 then return "FirstSea"
     elseif placeId == 4442272183 then return "SecondSea"
     elseif placeId == 7449423635 then return "ThirdSea"
-    else return "SecondSea" end
+    else return "FirstSea" end
+end
+
+local function GetPlayerLevel()
+    local lvl = 1
+    pcall(function()
+        if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
+            lvl = LocalPlayer.Data.Level.Value
+        end
+    end)
+    return lvl
 end
 
 local function GetMyQuestData()
     local sea = GetCurrentSea()
-    local level = 1
-    pcall(function() level = LocalPlayer.Data.Level.Value end)
-    for _, quest in pairs(QuestsData[sea]) do
-        if level >= quest.MinLevel and level <= quest.MaxLevel then return quest end
+    local level = GetPlayerLevel()
+    
+    for _, quest in ipairs(QuestsData[sea]) do
+        if level >= quest.MinLevel and level <= quest.MaxLevel then
+            return quest
+        end
     end
-    return QuestsData[sea][#QuestsData[sea]]
+    return QuestsData[sea][1]
 end
 
 -- =================================================================
--- 2. المحرك المطور لمنع الـ Rubberband (Anti-Rubberband Engine)
+-- 2. محرك الطيران ومنع التعليق بالمباني (Safe High-Bypass Engine)
 -- =================================================================
 local function ResetVelocity(char)
     if not char then return end
@@ -88,14 +100,14 @@ local function ResetVelocity(char)
     end
 end
 
-local function SmoothBypassBlink(targetCFrame)
+local function MoveToTargetSafe(targetCFrame)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
     local hrp = char.HumanoidRootPart
     local dist = (hrp.Position - targetCFrame.Position).Magnitude
 
-    -- تعطيل التصادم
+    -- تعطيل التصادم مع المباني
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
@@ -108,8 +120,14 @@ local function SmoothBypassBlink(targetCFrame)
         return
     end
 
-    -- تقسيم المسافة إلى أجزاء صغيرة جداً (Steps) مع مراعاة سرعة السيرفر الآمنة
-    local stepSize = 18 -- حجم القفزة الواحدة
+    -- إذا كانت المسافة جغرافيا بعيدة، نرتفع فوق المباني أولاً
+    if dist > 150 then
+        local skyPos = Vector3.new(hrp.Position.X, hrp.Position.Y + 120, hrp.Position.Z)
+        hrp.CFrame = CFrame.new(skyPos)
+        task.wait(0.05)
+    end
+
+    local stepSize = 16
     local currentPos = hrp.Position
     local targetPos = targetCFrame.Position
     local direction = (targetPos - currentPos).Unit
@@ -121,9 +139,7 @@ local function SmoothBypassBlink(targetCFrame)
         currentPos = currentPos + (direction * stepSize)
         hrp.CFrame = CFrame.new(currentPos, targetPos)
         ResetVelocity(char)
-
-        -- تأخير آمن جداً يمنع كشف السيرفر للحركة
-        task.wait(0.02)
+        task.wait(0.015)
     end
 
     if _G.AutoFarm and LocalPlayer.Character then
@@ -133,7 +149,7 @@ local function SmoothBypassBlink(targetCFrame)
 end
 
 -- =================================================================
--- 3. منطق التلفيل المباشر
+-- 3. فحص المهمة والقتال
 -- =================================================================
 local lastQuestTime = 0
 
@@ -169,7 +185,7 @@ local function FastAttack()
 end
 
 -- =================================================================
--- 4. الحلقة الأساسية
+-- 4. الحلقة الأساسية الذكية
 -- =================================================================
 task.spawn(function()
     while true do
@@ -180,7 +196,7 @@ task.spawn(function()
                 local questActive = HasQuestActive()
 
                 if not questActive then
-                    -- الذهاب واستلام المهمة
+                    -- الذهاب إلى الـ NPC الصحيح المناسب للفل
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -189,7 +205,7 @@ task.spawn(function()
                         end
                     end
 
-                    SmoothBypassBlink(npcPos * CFrame.new(0, 2, 3))
+                    MoveToTargetSafe(npcPos * CFrame.new(0, 2, 3))
 
                     if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 15 then
                         if tick() - lastQuestTime > 1.2 then
@@ -198,22 +214,22 @@ task.spawn(function()
                         end
                     end
                 else
-                    -- الذهاب وقتل الأعداء
+                    -- الانتقال فوق الوحوش المطلوبة والبدء بالقتل
                     local enemy = GetTargetEnemy(questData.EnemyName)
                     if enemy then
-                        local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0)
+                        local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0)
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
 
-                        if dist > 10 then
-                            SmoothBypassBlink(enemyPos)
+                        if dist > 12 then
+                            MoveToTargetSafe(enemyPos)
                         else
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
                             ResetVelocity(LocalPlayer.Character)
                             FastAttack()
                         end
                     else
-                        -- الانتظار فوق موقع الوحوش عند إعادة الإرسال (Respawn)
-                        SmoothBypassBlink(questData.FallbackNPC * CFrame.new(0, 15, 0))
+                        -- إذا كان الوحش ميت ويفرخ، ننتظر فوق نقطته
+                        MoveToTargetSafe(questData.FallbackNPC * CFrame.new(0, 15, 0))
                     end
                 end
             end
