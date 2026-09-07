@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Ultimate Fixed Auto Farm (Weapon Equip & Quest Target Fix)
+-- Ultimate Fixed Auto Farm (Exact Internal Names for Tools)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -41,26 +41,29 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- Full Internal Tool Names for Melee Styles
-local MeleeNames = {
+-- Exact Internal Tool Names for Melee Styles in Blox Fruits
+local InternalMeleeNames = {
     ["Combat"] = true,
+    ["DarkStep"] = true,
     ["Dark Step"] = true,
-    ["Black Leg"] = true,
+    ["BlackLeg"] = true,
     ["Electric"] = true,
+    ["WaterKungFu"] = true,
     ["Water Kung Fu"] = true,
-    ["Fishman Karate"] = true,
-    ["Dragon Claw"] = true,
+    ["FishmanKarate"] = true,
+    ["DragonClaw"] = true,
+    ["DragonBreath"] = true,
     ["Dragon Breath"] = true,
     ["Superhuman"] = true,
-    ["Death Step"] = true,
-    ["Sharkman Karate"] = true,
-    ["Electric Claw"] = true,
-    ["Dragon Talon"] = true,
+    ["DeathStep"] = true,
+    ["SharkmanKarate"] = true,
+    ["ElectricClaw"] = true,
+    ["DragonTalon"] = true,
     ["Godhuman"] = true,
-    ["Sanguine Art"] = true
+    ["SanguineArt"] = true
 }
 
--- Precise Auto Equip Function using Internal Names
+-- Fast & Guaranteed Auto Equip Function
 local function equipWeapon()
     local character = LocalPlayer.Character
     if not character then return end
@@ -68,10 +71,11 @@ local function equipWeapon()
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
 
-    -- Check if tool is already equipped
+    -- Check currently equipped tool
     local currentTool = character:FindFirstChildOfClass("Tool")
     if currentTool then
-        if _G.SelectedWeapon == "Melee" and (MeleeNames[currentTool.Name] or currentTool.ToolTip == "Melee") then
+        local tName = currentTool.Name
+        if _G.SelectedWeapon == "Melee" and (InternalMeleeNames[tName] or currentTool.ToolTip == "Melee" or tName:lower():find("step") or tName:lower():find("leg") or tName:lower():find("combat")) then
             return
         elseif _G.SelectedWeapon == "Sword" and currentTool.ToolTip == "Sword" then
             return
@@ -80,11 +84,12 @@ local function equipWeapon()
         end
     end
 
-    -- Search Backpack for matching weapon
+    -- Equip tool from Backpack using exact internal names
     for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
         if item:IsA("Tool") then
+            local name = item.Name
             if _G.SelectedWeapon == "Melee" then
-                if MeleeNames[item.Name] or item.ToolTip == "Melee" or item.Name:lower():find("step") or item.Name:lower():find("kung") or item.Name:lower():find("karate") or item.Name:lower():find("claw") or item.Name:lower():find("god") then
+                if InternalMeleeNames[name] or item.ToolTip == "Melee" or name:lower():find("step") or name:lower():find("leg") or name:lower():find("combat") or name:lower():find("kung") or name:lower():find("karate") or name:lower():find("claw") or name:lower():find("god") then
                     humanoid:EquipTool(item)
                     break
                 end
@@ -99,14 +104,14 @@ local function equipWeapon()
     end
 end
 
--- Fast Attack Trigger
+-- Fast Attack Execution
 local function doAttack()
     equipWeapon()
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(500, 500))
 end
 
--- Collision Control (Noclip)
+-- Noclip Bypass
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -119,7 +124,7 @@ task.spawn(function()
     end
 end)
 
--- Smooth Tween Movement (Anti-Rubberband)
+-- Anti-Rubberband Smooth Tween Bypass
 local currentTween = nil
 local function tweenTo(targetCFrame)
     local character = LocalPlayer.Character
@@ -153,7 +158,7 @@ local function hasQuest()
     return false
 end
 
--- Quests & Enemies Database (Sea 1, 2, 3)
+-- Quests Database (Sea 1, 2, 3)
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -225,7 +230,7 @@ local function getQuestData()
     end
 end
 
--- Primary Auto Farm Logic Loop
+-- Main Loop
 local lastQuestTime = 0
 
 task.spawn(function()
@@ -235,7 +240,7 @@ task.spawn(function()
                 local questInfo = getQuestData()
                 if not questInfo then return end
 
-                -- Step 1: Take Quest if not taken
+                -- Step 1: Get Quest
                 if not hasQuest() then
                     if tick() - lastQuestTime > 1.5 then
                         tweenTo(questInfo.NpcCFrame)
@@ -249,7 +254,7 @@ task.spawn(function()
                         end
                     end
                 else
-                    -- Step 2: Target & Farm Enemies
+                    -- Step 2: Target Enemy
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
@@ -263,11 +268,11 @@ task.spawn(function()
                     end
 
                     if targetMob then
-                        -- Position character directly above mob and attack
+                        -- Hover above target and hit
                         tweenTo(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0))
                         doAttack()
                     else
-                        -- Go to Spawn Point if Mob isn't found yet
+                        -- Go to spawn area if enemy not present
                         tweenTo(questInfo.MobWaypoint * CFrame.new(0, 8, 0))
                     end
                 end
