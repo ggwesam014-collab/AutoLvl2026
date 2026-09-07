@@ -1,11 +1,10 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Anti-Rubberband & Anti-Cheat Bypass
+-- Spider Hub - { 2.0 } | Smooth Step-Lerp & Fixed Quest Loop
 -- =================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
@@ -77,21 +76,12 @@ local function GetMyQuestData()
 end
 
 -- =================================================================
--- 2. محرك التوين المتقدم المضاد للرجوع (Anti-Rubberband Engine)
+-- 2. محرك الحركة المحدث (Smooth Movement Engine)
 -- =================================================================
-local currentTween = nil
-local noclipConnection = nil
+local isMoving = false
 
-local function StopAllMovement()
-    if currentTween then
-        currentTween:Cancel()
-        currentTween = nil
-    end
-    if noclipConnection then
-        noclipConnection:Disconnect()
-        noclipConnection = nil
-    end
-    
+local function StopMovement()
+    isMoving = false
     local char = LocalPlayer.Character
     if char then
         for _, part in pairs(char:GetDescendants()) do
@@ -104,48 +94,38 @@ local function StopAllMovement()
             local bv = hrp:FindFirstChild("SpiderBV")
             if bv then bv:Destroy() end
         end
-        local hum = char:FindFirstChild("Humanoid")
-        if hum then
-            pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
-        end
     end
 end
 
-local function RedzAntiRubberbandTween(targetCFrame)
-    if not _G.AutoFarm then 
-        StopAllMovement()
-        return 
+local function MoveToTarget(targetCFrame)
+    if not _G.AutoFarm then
+        StopMovement()
+        return
     end
 
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then return end
-    
+
     local hrp = char.HumanoidRootPart
     local humanoid = char.Humanoid
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local dist = (hrp.Position - targetCFrame.Position).Magnitude
 
-    if distance <= 10 then
-        if currentTween then currentTween:Cancel() end
+    if dist <= 8 then
         hrp.CFrame = targetCFrame
+        StopMovement()
         return
     end
 
-    -- 1. تفعيل NoClip دائم لمنع التصادم الذي يسبب الـ Rubberband
-    if not noclipConnection then
-        noclipConnection = RunService.Stepped:Connect(function()
-            if _G.AutoFarm and LocalPlayer.Character then
-                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            else
-                StopAllMovement()
-            end
-        end)
+    isMoving = true
+
+    -- إيقاف التصادم للفيزياء
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
     end
 
-    -- 2. تثبيت الفيزياء لمنع تأثير الجاذبية والوقوع
+    -- تثبيت BodyVelocity منعاً لتعليق الفيزياء
     local bv = hrp:FindFirstChild("SpiderBV") or Instance.new("BodyVelocity")
     bv.Name = "SpiderBV"
     bv.Velocity = Vector3.new(0, 0, 0)
@@ -154,19 +134,22 @@ local function RedzAntiRubberbandTween(targetCFrame)
 
     pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
 
-    -- 3. سرعة آمنة وممتازة لمنع الـ Anti-Cheat (240-250)
-    local safeSpeed = 245
-    local tweenInfo = TweenInfo.new(distance / safeSpeed, Enum.EasingStyle.Linear)
+    -- الانتقال التدريجي بحساب المسافة والسلاسة (Step Speed = 220)
+    local speed = 220
+    local stepDistance = speed * RunService.Heartbeat:Wait()
+    local direction = (targetCFrame.Position - hrp.Position).Unit
     
-    if currentTween then currentTween:Cancel() end
-    currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    currentTween:Play()
+    if dist > stepDistance then
+        hrp.CFrame = hrp.CFrame + (direction * stepDistance)
+    else
+        hrp.CFrame = targetCFrame
+    end
 end
 
 -- =================================================================
--- 3. منطق البحث عن المهام والأعداء
+-- 3. فحص المهمة والضرب
 -- =================================================================
-local lastQuestCheck = 0
+local lastQuestTime = 0
 
 local function HasQuestActive()
     local myGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
@@ -204,14 +187,14 @@ end
 -- =================================================================
 task.spawn(function()
     while true do
-        task.wait(0.05)
+        task.wait()
         if _G.AutoFarm then
             local questData = GetMyQuestData()
             if questData then
                 local questActive = HasQuestActive()
 
                 if not questActive then
-                    -- الذهاب إلى NPC المهمة
+                    -- أخذ المهمة
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -219,37 +202,36 @@ task.spawn(function()
                             npcPos = npc.HumanoidRootPart.CFrame
                         end
                     end
-                    
-                    RedzAntiRubberbandTween(npcPos * CFrame.new(0, 2, 3))
-                    
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 15 then
-                        if tick() - lastQuestCheck > 1 then
-                            lastQuestCheck = tick()
+
+                    MoveToTarget(npcPos * CFrame.new(0, 2, 3))
+
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 12 then
+                        if tick() - lastQuestTime > 1.5 then
+                            lastQuestTime = tick()
                             CommF:InvokeServer("StartQuest", questData.QuestName, 1)
                         end
                     end
                 else
-                    -- الذهاب وقتل الوحوش
+                    -- الذهاب وقتل الأعداء
                     local enemy = GetTargetEnemy(questData.EnemyName)
                     if enemy then
-                        local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 9, 0)
+                        local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0)
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
-                        
-                        if dist > 12 then
-                            RedzAntiRubberbandTween(enemyPos)
+
+                        if dist > 10 then
+                            MoveToTarget(enemyPos)
                         else
-                            if currentTween then currentTween:Cancel() end
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
                             FastAttack()
                         end
                     else
-                        -- الانتظار عند مكان السباون عند عدم وجود أعداء
-                        RedzAntiRubberbandTween(questData.FallbackNPC * CFrame.new(0, 20, 0))
+                        -- الانتظار في الموقع عند عدم إرسال أعداء
+                        MoveToTarget(questData.FallbackNPC * CFrame.new(0, 15, 0))
                     end
                 end
             end
         else
-            StopAllMovement()
+            StopMovement()
         end
     end
 end)
@@ -335,7 +317,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
         AutoFarmBtn.Text = "Auto Farm Level: OFF"
         AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
         AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-        StopAllMovement()
+        StopMovement()
     end
 end)
 
