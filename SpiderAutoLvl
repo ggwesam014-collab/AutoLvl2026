@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Auto Level Script (Max Level 2800)
+-- Fixed Movement & Auto Level (Level 1 to 2800)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -37,7 +37,6 @@ local Dropdown = Tab:CreateDropdown({
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 
@@ -57,7 +56,7 @@ local function equipWeapon()
     end
 end
 
--- Noclip to prevent anti-cheat rubberband
+-- Noclip & No Gravity System
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -70,25 +69,21 @@ task.spawn(function()
     end
 end)
 
--- Tween movement function
-local currentTween = nil
-local function bypassTween(targetCFrame)
+-- Fly System to prevent Rubberband
+local function flyTo(targetCFrame)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     local hrp = character.HumanoidRootPart
     
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    if distance < 10 then 
+    
+    if distance > 10 then
+        local speed = 300
+        local direction = (targetCFrame.Position - hrp.Position).Unit
+        hrp.CFrame = hrp.CFrame + (direction * (speed * task.wait()))
+    else
         hrp.CFrame = targetCFrame
-        return 
     end
-    
-    local speed = 320
-    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-    
-    if currentTween then currentTween:Cancel() end
-    currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    currentTween:Play()
 end
 
 -- Full Quests Database (1 to 2800 Level)
@@ -163,9 +158,9 @@ local function getQuestData()
     end
 end
 
--- Main Loop
+-- Main Farming Loop
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait() do
         if _G.AutoFarm then
             pcall(function()
                 local questInfo = getQuestData()
@@ -174,17 +169,18 @@ task.spawn(function()
                 local mainGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
                 local questGui = mainGui and mainGui:FindFirstChild("Quest")
                 
-                -- Check if player has an active quest
+                -- Check if quest is active
                 if not questGui or not questGui.Visible then
-                    bypassTween(questInfo.NpcCFrame)
-                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude <= 15 then
+                    flyTo(questInfo.NpcCFrame)
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude <= 12 then
                         local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
                         if commF then
                             commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
+                            task.wait(0.5) -- Cooldown to confirm quest registration
                         end
                     end
                 else
-                    -- Search and attack target mob
+                    -- Find and fight target mob
                     local enemies = workspace:FindFirstChild("Enemies")
                     local targetMob = nil
                     
@@ -198,14 +194,17 @@ task.spawn(function()
                     end
 
                     if targetMob then
-                        -- Hover above mob (8 units)
-                        local mobPos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0)
-                        bypassTween(mobPos)
+                        -- Hover above mob
+                        local mobPos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 9, 0)
+                        flyTo(mobPos)
                         
-                        -- Equip weapon and attack
+                        -- Equip weapon & attack
                         equipWeapon()
                         VirtualUser:CaptureController()
                         VirtualUser:ClickButton1(Vector2.new(500, 500))
+                    else
+                        -- Teleport to mob spawn area if no active mob found
+                        flyTo(questInfo.NpcCFrame * CFrame.new(0, 30, 50))
                     end
                 end
             end)
