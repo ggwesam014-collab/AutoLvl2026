@@ -1,379 +1,171 @@
--- =================================================================
--- Spider Hub - { 2.0 } | Fixed Universal Multi-Sea Auto Farm
--- =================================================================
+-- تحميل مكتبة الواجهات Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
+local Window = Rayfield:CreateWindow({
+   Name = "Auto Level | Blox Fruits",
+   LoadingTitle = "جاري تحميل السكربت...",
+   LoadingSubtitle = "by Assistant",
+   ConfigurationSaving = { Enabled = false }
+})
 
-local LocalPlayer = Players.LocalPlayer
-local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+local Tab = Window:CreateTab("Main Farm", 4483362458)
 
+-- متغيرات التحكم
 _G.AutoFarm = false
+_G.SelectedWeapon = "Melee"
 
--- =================================================================
--- 1. جداول المهام والإحداثيات لجميع العوالم
--- =================================================================
-local AllQuests = {
-    ["FirstSea"] = {
-        {MinLevel = 1, MaxLevel = 14, QuestName = "BanditQuest1", LevelReq = 1, EnemyName = "Bandit", NPCName = "Bandit Quest Giver", FallbackNPC = CFrame.new(1059, 16, 1549)},
-        {MinLevel = 15, MaxLevel = 29, QuestName = "JungleQuest", LevelReq = 1, EnemyName = "Monkey", NPCName = "Jungle Quest Giver", FallbackNPC = CFrame.new(-1598, 36, 153)},
-        {MinLevel = 30, MaxLevel = 59, QuestName = "PirateQuest", LevelReq = 1, EnemyName = "Pirate", NPCName = "Pirate Quest Giver", FallbackNPC = CFrame.new(-1140, 4, 3828)},
-        {MinLevel = 60, MaxLevel = 89, QuestName = "SnowQuest", LevelReq = 1, EnemyName = "Snow Bandit", NPCName = "Snow Quest Giver", FallbackNPC = CFrame.new(1386, 87, -1298)},
-        {MinLevel = 90, MaxLevel = 119, QuestName = "MarineQuest2", LevelReq = 1, EnemyName = "Chief Petty Officer", NPCName = "Marine Quest Giver", FallbackNPC = CFrame.new(-5035, 28, 4322)},
-        {MinLevel = 120, MaxLevel = 149, QuestName = "SkyQuest", LevelReq = 1, EnemyName = "Sky Bandit", NPCName = "Sky Quest Giver", FallbackNPC = CFrame.new(-4842, 717, -2623)},
-        {MinLevel = 150, MaxLevel = 189, QuestName = "PrisonerQuest", LevelReq = 1, EnemyName = "Prisoner", NPCName = "Prisoner Quest Giver", FallbackNPC = CFrame.new(5308, 1, 475)},
-        {MinLevel = 190, MaxLevel = 249, QuestName = "ColosseumQuest", LevelReq = 1, EnemyName = "Toga Warrior", NPCName = "Colosseum Quest Giver", FallbackNPC = CFrame.new(-1580, 7, -2982)},
-        {MinLevel = 250, MaxLevel = 299, QuestName = "MagmaQuest", LevelReq = 1, EnemyName = "Military Soldier", NPCName = "Magma Quest Giver", FallbackNPC = CFrame.new(-5313, 12, 8515)},
-        {MinLevel = 300, MaxLevel = 374, QuestName = "FishmanQuest", LevelReq = 1, EnemyName = "Fishman Warrior", NPCName = "Fishman Quest Giver", FallbackNPC = CFrame.new(61163, 18, 1569)},
-        {MinLevel = 375, MaxLevel = 449, QuestName = "SkyExp1Quest", LevelReq = 1, EnemyName = "God's Guard", NPCName = "Sky Exp1 Quest Giver", FallbackNPC = CFrame.new(-7861, 5545, -380)},
-        {MinLevel = 450, MaxLevel = 699, QuestName = "FountainQuest", LevelReq = 1, EnemyName = "Galley Pirate", NPCName = "Fountain Quest Giver", FallbackNPC = CFrame.new(5259, 38, 4050)}
-    },
-    ["SecondSea"] = {
-        {MinLevel = 700, MaxLevel = 724, QuestName = "Area1Quest", LevelReq = 1, EnemyName = "Raider", NPCName = "Area1 Quest Giver", FallbackNPC = CFrame.new(-425, 73, 1837)},
-        {MinLevel = 725, MaxLevel = 774, QuestName = "Area1Quest", LevelReq = 2, EnemyName = "Mercenary", NPCName = "Area1 Quest Giver", FallbackNPC = CFrame.new(-425, 73, 1837)},
-        {MinLevel = 775, MaxLevel = 799, QuestName = "Area2Quest", LevelReq = 1, EnemyName = "Swan Pirate", NPCName = "Area2 Quest Giver", FallbackNPC = CFrame.new(638, 73, 918)},
-        {MinLevel = 800, MaxLevel = 874, QuestName = "Area2Quest", LevelReq = 2, EnemyName = "Factory Staff", NPCName = "Area2 Quest Giver", FallbackNPC = CFrame.new(638, 73, 918)},
-        {MinLevel = 875, MaxLevel = 899, QuestName = "SwanQuest", LevelReq = 1, EnemyName = "Marine Lieutenant", NPCName = "Swan Quest Giver", FallbackNPC = CFrame.new(913, 120, 1312)},
-        {MinLevel = 900, MaxLevel = 949, QuestName = "SwanQuest", LevelReq = 2, EnemyName = "Marine Captain", NPCName = "Swan Quest Giver", FallbackNPC = CFrame.new(913, 120, 1312)},
-        {MinLevel = 950, MaxLevel = 999, QuestName = "ZombieQuest", LevelReq = 1, EnemyName = "Zombie", NPCName = "Zombie Quest Giver", FallbackNPC = CFrame.new(-5492, 48, -794)},
-        {MinLevel = 1000, MaxLevel = 1049, QuestName = "SnowMountainQuest", LevelReq = 1, EnemyName = "Snow Trooper", NPCName = "Snow Mountain Quest Giver", FallbackNPC = CFrame.new(608, 401, -5371)},
-        {MinLevel = 1050, MaxLevel = 1099, QuestName = "SnowMountainQuest", LevelReq = 2, EnemyName = "Winter Warrior", NPCName = "Snow Mountain Quest Giver", FallbackNPC = CFrame.new(608, 401, -5371)},
-        {MinLevel = 1100, MaxLevel = 1124, QuestName = "IceSideQuest", LevelReq = 1, EnemyName = "Lab Subordinate", NPCName = "Ice Side Quest Giver", FallbackNPC = CFrame.new(-6060, 15, -4900)},
-        {MinLevel = 1125, MaxLevel = 1174, QuestName = "IceSideQuest", LevelReq = 2, EnemyName = "Horned Warrior", NPCName = "Ice Side Quest Giver", FallbackNPC = CFrame.new(-6060, 15, -4900)},
-        {MinLevel = 1175, MaxLevel = 1224, QuestName = "FireSideQuest", LevelReq = 1, EnemyName = "Magma Ninja", NPCName = "Fire Side Quest Giver", FallbackNPC = CFrame.new(-5430, 15, -5294)},
-        {MinLevel = 1225, MaxLevel = 1249, QuestName = "FireSideQuest", LevelReq = 2, EnemyName = "Lava Pirate", NPCName = "Fire Side Quest Giver", FallbackNPC = CFrame.new(-5430, 15, -5294)},
-        {MinLevel = 1250, MaxLevel = 1299, QuestName = "ShipQuest1", LevelReq = 1, EnemyName = "Ship Deckhand", NPCName = "Ship Quest Giver", FallbackNPC = CFrame.new(1038, 125, 32911)},
-        {MinLevel = 1300, MaxLevel = 1349, QuestName = "ShipQuest2", LevelReq = 1, EnemyName = "Ship Engineer", NPCName = "Ship Quest Giver 2", FallbackNPC = CFrame.new(968, 125, 32911)},
-        {MinLevel = 1350, MaxLevel = 1399, QuestName = "FrostQuest", LevelReq = 1, EnemyName = "Arctic Warrior", NPCName = "Frost Quest Giver", FallbackNPC = CFrame.new(5667, 28, -6480)},
-        {MinLevel = 1400, MaxLevel = 1424, QuestName = "FrostQuest", LevelReq = 2, EnemyName = "Snow Lurker", NPCName = "Frost Quest Giver", FallbackNPC = CFrame.new(5667, 28, -6480)},
-        {MinLevel = 1425, MaxLevel = 1499, QuestName = "ForgottenQuest", LevelReq = 1, EnemyName = "Sea Soldier", NPCName = "Forgotten Quest Giver", FallbackNPC = CFrame.new(-3054, 236, -10148)}
-    },
-    ["ThirdSea"] = {
-        {MinLevel = 1500, MaxLevel = 1574, QuestName = "PiratePortQuest", LevelReq = 1, EnemyName = "Pirate Millionaire", NPCName = "Pirate Port Quest Giver", FallbackNPC = CFrame.new(-290, 44, 5580)},
-        {MinLevel = 1575, MaxLevel = 1699, QuestName = "AmazonQuest", LevelReq = 1, EnemyName = "Pistol Billionaire", NPCName = "Amazon Quest Giver", FallbackNPC = CFrame.new(5833, 51, -1100)},
-        {MinLevel = 1700, MaxLevel = 1799, QuestName = "MarineTreeQuest", LevelReq = 1, EnemyName = "Marine Commodore", NPCName = "Marine Tree Quest Giver", FallbackNPC = CFrame.new(2180, 29, -6740)},
-        {MinLevel = 1800, MaxLevel = 1899, QuestName = "FloatingTurtleQuest", LevelReq = 1, EnemyName = "Fishman Raider", NPCName = "Floating Turtle Quest Giver", FallbackNPC = CFrame.new(-13274, 332, -7630)},
-        {MinLevel = 1900, MaxLevel = 1999, QuestName = "CastleQuest", LevelReq = 1, EnemyName = "Corporal", NPCName = "Castle Quest Giver", FallbackNPC = CFrame.new(-5030, 314, -2940)},
-        {MinLevel = 2000, MaxLevel = 2074, QuestName = "HauntedQuest1", LevelReq = 1, EnemyName = "Reborn Skeleton", NPCName = "Haunted Quest Giver", FallbackNPC = CFrame.new(-9515, 142, 5520)},
-        {MinLevel = 2075, MaxLevel = 2199, QuestName = "HauntedQuest2", LevelReq = 1, EnemyName = "Demonic Soul", NPCName = "Haunted Quest Giver", FallbackNPC = CFrame.new(-9515, 142, 5520)},
-        {MinLevel = 2200, MaxLevel = 2299, QuestName = "PeanutQuest", LevelReq = 1, EnemyName = "Peanut Scout", NPCName = "Peanut Quest Giver", FallbackNPC = CFrame.new(-2100, 38, -10190)},
-        {MinLevel = 2300, MaxLevel = 2399, QuestName = "IceCreamQuest", LevelReq = 1, EnemyName = "Ice Cream Chef", NPCName = "Ice Cream Quest Giver", FallbackNPC = CFrame.new(-820, 65, -10960)},
-        {MinLevel = 2400, MaxLevel = 2474, QuestName = "TikiQuest1", LevelReq = 1, EnemyName = "Isle Outlaw", NPCName = "Tiki Quest Giver 1", FallbackNPC = CFrame.new(-16234, 9, 483)},
-        {MinLevel = 2475, MaxLevel = 2800, QuestName = "TikiQuest2", LevelReq = 1, EnemyName = "Island Boy", NPCName = "Tiki Quest Giver 2", FallbackNPC = CFrame.new(-16234, 9, 483)}
-    }
-}
+-- زر التفعيل والتعطيل
+local Toggle = Tab:CreateToggle({
+   Name = "تفعيل Auto Level",
+   CurrentValue = false,
+   Flag = "AutoLevelToggle",
+   Callback = function(Value)
+      _G.AutoFarm = Value
+   end,
+})
 
--- معرفة البحر المباشر
-local function GetCurrentSea()
-    local pId = game.PlaceId
-    if pId == 2753915549 then return "FirstSea"
-    elseif pId == 4442272183 then return "SecondSea"
-    elseif pId == 7449423635 then return "ThirdSea"
-    else return "FirstSea" end
-end
+-- اختيار السلاح
+local Dropdown = Tab:CreateDropdown({
+   Name = "اختر السلاح",
+   Options = {"Melee", "Sword", "Blox Fruit"},
+   CurrentOption = {"Melee"},
+   MultipleOptions = false,
+   Flag = "WeaponDropdown",
+   Callback = function(Option)
+      _G.SelectedWeapon = Option[1]
+   end,
+})
 
--- معرفة اللفل
-local function GetPlayerLevel()
-    local lvl = 1
-    pcall(function()
-        if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
-            lvl = LocalPlayer.Data.Level.Value
-        elseif LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Level") then
-            local txt = LocalPlayer.PlayerGui.Main.Level.Text
-            lvl = tonumber(string.match(txt, "%d+")) or 1
-        end
-    end)
-    return lvl
-end
+-- الخدمات الأساسية
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local function GetMyQuestData()
-    local sea = GetCurrentSea()
-    local level = GetPlayerLevel()
-    local questList = AllQuests[sea] or AllQuests["FirstSea"]
-
-    for _, quest in ipairs(questList) do
-        if level >= quest.MinLevel and level <= quest.MaxLevel then
-            return quest
-        end
-    end
-    return questList[1]
-end
-
--- =================================================================
--- 2. الطيران العالي الآمن (منع السقوط في البحر نهائياً)
--- =================================================================
-local function HighFlyTo(targetCFrame)
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-
-    local hrp = char.HumanoidRootPart
+-- دالة التحريك (Tween)
+local function moveTo(targetCFrame)
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
     
-    -- NoClip لمنع الاصطدام
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-            part.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    local speed = 300
+    local tween = TweenService:Create(hrp, TweenInfo.new(distance / speed, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+    tween:Play()
+    return tween
+end
 
-    local dist = (hrp.Position - targetCFrame.Position).Magnitude
-    if dist < 15 then
-        hrp.CFrame = targetCFrame
-        return
-    end
-
-    -- الارتفاع الآمن فوق مستوى البحر بأمان (Y = 250+)
-    local safeY = math.max(hrp.Position.Y, targetCFrame.Position.Y)
-    if safeY < 200 then safeY = 250 end
-
-    -- مرحلة 1: الصعود للارتفاع الآمن
-    if hrp.Position.Y < safeY - 20 then
-        hrp.CFrame = CFrame.new(hrp.Position.X, safeY, hrp.Position.Z)
-        task.wait(0.05)
-    end
-
-    -- مرحلة 2: الحركة الأفوقية المباشرة
-    local targetHighPos = Vector3.new(targetCFrame.Position.X, safeY, targetCFrame.Position.Z)
-    local step = 25
-    local horizDist = (Vector3.new(hrp.Position.X, 0, hrp.Position.Z) - Vector3.new(targetHighPos.X, 0, targetHighPos.Z)).Magnitude
-    local steps = math.floor(horizDist / step)
-    local dir = (targetHighPos - hrp.Position).Unit
-
-    for i = 1, steps do
-        if not _G.AutoFarm or not LocalPlayer.Character then break end
+-- قاعدة بيانات المهام للعوالم الثلاثة
+local function getQuestData()
+    local level = LocalPlayer.Data.Level.Value
+    
+    -- World 1 (First Sea)
+    if level >= 1 and level < 15 then
+        return {QuestName = "BanditQuest1", QuestNum = 1, MobName = "Bandit", NpcCFrame = CFrame.new(1059, 16, 1548)}
+    elseif level >= 15 and level < 30 then
+        return {QuestName = "JungleQuest", QuestNum = 1, MobName = "Monkey", NpcCFrame = CFrame.new(-1598, 36, 153)}
+    elseif level >= 30 and level < 60 then
+        return {QuestName = "JungleQuest", QuestNum = 2, MobName = "Gorilla", NpcCFrame = CFrame.new(-1598, 36, 153)}
+    elseif level >= 60 and level < 90 then
+        return {QuestName = "BuggyQuest1", QuestNum = 1, MobName = "Pirate", NpcCFrame = CFrame.new(-1141, 4, 3832)}
+    elseif level >= 90 and level < 120 then
+        return {QuestName = "DesertQuest", QuestNum = 1, MobName = "Desert Bandit", NpcCFrame = CFrame.new(894, 6, 4386)}
+    elseif level >= 120 and level < 150 then
+        return {QuestName = "SnowQuest", QuestNum = 1, MobName = "Snow Bandit", NpcCFrame = CFrame.new(1385, 87, -1298)}
+    elseif level >= 150 and level < 190 then
+        return {QuestName = "MarineQuest2", QuestNum = 1, MobName = "Chief Petty Officer", NpcCFrame = CFrame.new(-5035, 20, 4324)}
+    elseif level >= 190 and level < 275 then
+        return {QuestName = "SkyQuest", QuestNum = 1, MobName = "Sky Bandit", NpcCFrame = CFrame.new(-4842, 717, -2623)}
+    elseif level >= 275 and level < 375 then
+        return {QuestName = "ColosseumQuest", QuestNum = 1, MobName = "Toga Warrior", NpcCFrame = CFrame.new(-1580, 7, -2982)}
+    elseif level >= 375 and level < 450 then
+        return {QuestName = "MagmaQuest", QuestNum = 1, MobName = "Military Soldier", NpcCFrame = CFrame.new(-5313, 12, 8515)}
+    elseif level >= 450 and level < 525 then
+        return {QuestName = "FishmanQuest", QuestNum = 1, MobName = "Fishman Warrior", NpcCFrame = CFrame.new(61122, 18, 1569)}
+    elseif level >= 525 and level < 625 then
+        return {QuestName = "SkyQuest2", QuestNum = 1, MobName = "God's Guard", NpcCFrame = CFrame.new(-7906, 5611, -2280)}
+    elseif level >= 625 and level < 700 then
+        return {QuestName = "FountainQuest", QuestNum = 1, MobName = "Corporal", NpcCFrame = CFrame.new(5259, 38, 4050)}
+    
+    -- World 2 (Second Sea)
+    elseif level >= 700 and level < 775 then
+        return {QuestName = "Area1Quest", QuestNum = 1, MobName = "Raider", NpcCFrame = CFrame.new(-425, 73, 1836)}
+    elseif level >= 775 and level < 875 then
+        return {QuestName = "Area2Quest", QuestNum = 1, MobName = "Mercenary", NpcCFrame = CFrame.new(638, 73, 918)}
+    elseif level >= 875 and level < 1000 then
+        return {QuestName = "SwanQuest", QuestNum = 1, MobName = "Swan Pirate", NpcCFrame = CFrame.new(878, 122, 1235)}
+    elseif level >= 1000 and level < 1125 then
+        return {QuestName = "ZombieQuest", QuestNum = 1, MobName = "Zombie", NpcCFrame = CFrame.new(-5492, 48, -795)}
+    elseif level >= 1125 and level < 1250 then
+        return {QuestName = "SnowMountainQuest", QuestNum = 1, MobName = "Snow Trooper", NpcCFrame = CFrame.new(609, 401, -5372)}
+    elseif level >= 1250 and level < 1350 then
+        return {QuestName = "IceSideQuest", QuestNum = 1, MobName = "Lab Subordinate", NpcCFrame = CFrame.new(-6064, 16, -4927)}
+    elseif level >= 1350 and level < 1425 then
+        return {QuestName = "FireSideQuest", QuestNum = 1, MobName = "Magma Ninja", NpcCFrame = CFrame.new(-5430, 16, -5296)}
+    elseif level >= 1425 and level < 1500 then
+        return {QuestName = "WaterFighterQuest", QuestNum = 1, MobName = "Water Fighter", NpcCFrame = CFrame.new(2888, 14, -5283)}
         
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-
-        hrp.CFrame = hrp.CFrame + (dir * step)
-        hrp.Velocity = Vector3.new(0, 0, 0)
-        task.wait(0.01)
+    -- World 3 (Third Sea)
+    elseif level >= 1500 and level < 1575 then
+        return {QuestName = "PiratePortQuest", QuestNum = 1, MobName = "Pirate Millionaire", NpcCFrame = CFrame.new(-290, 44, 5580)}
+    elseif level >= 1575 and level < 1700 then
+        return {QuestName = "AmazonQuest", QuestNum = 1, MobName = "Pistol Billionaire", NpcCFrame = CFrame.new(5833, 52, -1100)}
+    elseif level >= 1700 and level < 1825 then
+        return {QuestName = "MarineTreeQuest", QuestNum = 1, MobName = "Marine Commodore", NpcCFrame = CFrame.new(2182, 29, -6737)}
+    elseif level >= 1825 and level < 1975 then
+        return {QuestName = "DeepForestIslandQuest", QuestNum = 1, MobName = "Forest Pirate", NpcCFrame = CFrame.new(-13233, 332, -7626)}
+    elseif level >= 1975 and level < 2075 then
+        return {QuestName = "HauntedQuest1", QuestNum = 1, MobName = "Reborn Skeleton", NpcCFrame = CFrame.new(-9482, 142, 5565)}
+    elseif level >= 2075 and level < 2200 then
+        return {QuestName = "PeanutQuest", QuestNum = 1, MobName = "Peanut Scout", NpcCFrame = CFrame.new(-2124, 38, -10237)}
+    elseif level >= 2200 and level < 2450 then
+        return {QuestName = "IceCreamQuest1", QuestNum = 1, MobName = "Ice Cream Chef", NpcCFrame = CFrame.new(-822, 66, -10965)}
+    elseif level >= 2450 then
+        return {QuestName = "ChocolatierQuest", QuestNum = 1, MobName = "Chocolate Bar Battler", NpcCFrame = CFrame.new(151, 24, -12774)}
     end
-
-    -- مرحلة 3: النزول للهدف
-    if _G.AutoFarm and LocalPlayer.Character then
-        hrp.CFrame = targetCFrame
-        hrp.Velocity = Vector3.new(0, 0, 0)
-    end
 end
 
--- =================================================================
--- 3. تجهيز السلاح والضرب
--- =================================================================
-local function EquipWeapon()
-    pcall(function()
-        local backpack = LocalPlayer.Backpack
-        local char = LocalPlayer.Character
-        if not char then return end
-
-        for _, item in pairs(backpack:GetChildren()) do
-            if item:IsA("Tool") and (item.ToolTip == "Melee" or item.ToolTip == "Sword" or item:FindFirstChild("Combat")) then
-                char.Humanoid:EquipTool(item)
-                break
-            end
-        end
-    end)
-end
-
-local function HasQuestActive()
-    pcall(function()
-        local myGui = LocalPlayer.PlayerGui:FindFirstChild("Main")
-        if myGui and myGui:FindFirstChild("Quest") then
-            return myGui.Quest.Visible
-        end
-    end)
-    return false
-end
-
-local function GetTargetEnemy(enemyName)
-    if workspace:FindFirstChild("Enemies") then
-        for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-            if enemy.Name == enemyName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                if enemy:FindFirstChild("HumanoidRootPart") then
-                    return enemy
-                end
-            end
-        end
-    end
-    return nil
-end
-
-local function FastAttack()
-    pcall(function()
-        EquipWeapon()
-        local weapon = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-        if weapon then
-            ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterAttack"):FireServer(0)
-            ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit"):FireServer(weapon)
-        end
-    end)
-end
-
--- =================================================================
--- 4. المحرك الرئيسي للثبات والقتال
--- =================================================================
-local lastQuestAttempt = 0
-
+-- حلقة التقدّم والتلفيل
 task.spawn(function()
-    while true do
-        task.wait(0.03)
+    while task.wait(0.1) do
         if _G.AutoFarm then
             pcall(function()
-                local questData = GetMyQuestData()
-                if questData then
-                    local questActive = HasQuestActive()
+                local questInfo = getQuestData()
+                if not questInfo then return end
 
-                    if not questActive then
-                        -- الذهاب للـ NPC والأخذ
-                        local npcPos = questData.FallbackNPC
-                        if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
-                            local npc = workspace.NPCs[questData.NPCName]
-                            if npc:FindFirstChild("HumanoidRootPart") then
-                                npcPos = npc.HumanoidRootPart.CFrame
-                            end
+                local questGui = LocalPlayer.PlayerGui:FindFirstChild("Main") and LocalPlayer.PlayerGui.Main:FindFirstChild("Quest")
+                
+                -- إذا لم تكن هناك مهمة قائمة، اذهب لاستلامها
+                if not questGui or not questGui.Visible then
+                    moveTo(questInfo.NpcCFrame)
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude < 15 then
+                        local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                        if commF then
+                            commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
                         end
-
-                        HighFlyTo(npcPos * CFrame.new(0, 1, 2))
-
-                        local dist = (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude
-                        if dist < 15 then
-                            if tick() - lastQuestAttempt > 0.8 then
-                                lastQuestAttempt = tick()
-                                CommF:InvokeServer("StartQuest", questData.QuestName, questData.LevelReq or 1)
+                    end
+                else
+                    -- البحث عن الوحش والمهاجمة
+                    local enemies = workspace:FindFirstChild("Enemies")
+                    if enemies then
+                        local mobFound = false
+                        for _, mob in pairs(enemies:GetChildren()) do
+                            if mob.Name == questInfo.MobName and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
+                                mobFound = true
+                                -- التموضع فوق الوحش بمقدار 10 خطوات للهجوم بأمان
+                                moveTo(mob.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
+                                
+                                -- محاكاة الضرب
+                                local gameTool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                                if gameTool then
+                                    gameTool:Activate()
+                                end
+                                break
                             end
-                        end
-                    else
-                        -- قتال الوحش
-                        local enemy = GetTargetEnemy(questData.EnemyName)
-                        if enemy then
-                            local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0)
-                            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
-
-                            if dist > 15 then
-                                HighFlyTo(enemyPos)
-                            else
-                                LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
-                                LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-                                FastAttack()
-                            end
-                        else
-                            -- في حال عدم رسبنة الوحش، الذهاب لمكان الرسبنة المضمون
-                            HighFlyTo(questData.FallbackNPC * CFrame.new(0, 15, 0))
                         end
                     end
                 end
             end)
         end
     end
-end)
-
--- =================================================================
--- 5. الواجهة Spider Hub
--- =================================================================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SpiderHub2_Universal_Fixed"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = gethui and gethui() or CoreGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 170)
-MainFrame.Position = UDim2.new(0.5, -130, 0.4, -85)
-MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(220, 20, 20)
-MainStroke.Thickness = 1.5
-MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-MainStroke.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 32)
-Title.Position = UDim2.new(0, 0, 0, 5)
-Title.BackgroundTransparency = 1
-Title.Text = "Spider Hub - All Seas { 2.0 }"
-Title.TextColor3 = Color3.fromRGB(220, 20, 20)
-Title.TextSize = 15
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local AutoFarmBtn = Instance.new("TextButton")
-AutoFarmBtn.Size = UDim2.new(0.88, 0, 0, 38)
-AutoFarmBtn.Position = UDim2.new(0.06, 0, 0.28, 0)
-AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-AutoFarmBtn.Text = "Auto Farm Level: OFF"
-AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-AutoFarmBtn.TextSize = 13
-AutoFarmBtn.Font = Enum.Font.SourceSansBold
-AutoFarmBtn.Parent = MainFrame
-
-local BtnCorner1 = Instance.new("UICorner")
-BtnCorner1.CornerRadius = UDim.new(0, 6)
-BtnCorner1.Parent = AutoFarmBtn
-
-local BtnStroke1 = Instance.new("UIStroke")
-BtnStroke1.Color = Color3.fromRGB(220, 20, 20)
-BtnStroke1.Thickness = 1
-BtnStroke1.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-BtnStroke1.Parent = AutoFarmBtn
-
-local ComingSoonBtn = Instance.new("TextButton")
-ComingSoonBtn.Size = UDim2.new(0.88, 0, 0, 38)
-ComingSoonBtn.Position = UDim2.new(0.06, 0, 0.60, 0)
-ComingSoonBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-ComingSoonBtn.Text = "Coming Soon🔒"
-ComingSoonBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-ComingSoonBtn.TextSize = 13
-ComingSoonBtn.Font = Enum.Font.SourceSansBold
-ComingSoonBtn.AutoButtonColor = false
-ComingSoonBtn.Parent = MainFrame
-
-local BtnCorner2 = Instance.new("UICorner")
-BtnCorner2.CornerRadius = UDim.new(0, 6)
-BtnCorner2.Parent = ComingSoonBtn
-
-AutoFarmBtn.MouseButton1Click:Connect(function()
-    _G.AutoFarm = not _G.AutoFarm
-    if _G.AutoFarm then
-        AutoFarmBtn.Text = "Auto Farm Level: ON"
-        AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(220, 20, 20)
-        AutoFarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    else
-        AutoFarmBtn.Text = "Auto Farm Level: OFF"
-        AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-        AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-    end
-end)
-
-local ToggleUI = Instance.new("ImageButton")
-ToggleUI.Size = UDim2.new(0, 48, 0, 48)
-ToggleUI.Position = UDim2.new(0.05, 0, 0.2, 0)
-ToggleUI.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ToggleUI.Image = "rbxassetid://10643765103"
-ToggleUI.ImageColor3 = Color3.fromRGB(220, 20, 20)
-ToggleUI.Active = true
-ToggleUI.Draggable = true
-ToggleUI.Parent = ScreenGui
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(1, 0)
-ToggleCorner.Parent = ToggleUI
-
-local ToggleStroke = Instance.new("UIStroke")
-ToggleStroke.Color = Color3.fromRGB(220, 20, 20)
-ToggleStroke.Thickness = 1.5
-ToggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-ToggleStroke.Parent = ToggleUI
-
-ToggleUI.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
 end)
