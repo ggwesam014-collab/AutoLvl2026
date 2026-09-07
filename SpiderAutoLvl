@@ -1,10 +1,11 @@
 -- =================================================================
--- Redz Hub - Auto Farm Level (Dynamic + Fallback CFrame)
+-- Redz Hub - Fixed Anti-Rubberband & Auto Kill
 -- =================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
@@ -13,7 +14,7 @@ local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 _G.AutoFarm = false
 
 -- =================================================================
--- 1. بيانات المهام والوحوش مع موقع احتياطي للـ NPC
+-- 1. جدول المهام بدون أبواس
 -- =================================================================
 local QuestsData = {
     ["FirstSea"] = {
@@ -58,7 +59,7 @@ local QuestsData = {
 }
 
 -- =================================================================
--- 2. التعرف على البحر والبيانات
+-- 2. تحديد البحر واللفل
 -- =================================================================
 local function GetCurrentSea()
     local placeId = game.PlaceId
@@ -71,37 +72,59 @@ end
 local function GetMyQuestData()
     local sea = GetCurrentSea()
     local level = 1
-    pcall(function()
-        level = LocalPlayer.Data.Level.Value
-    end)
-    
+    pcall(function() level = LocalPlayer.Data.Level.Value end)
     for _, quest in pairs(QuestsData[sea]) do
-        if level >= quest.MinLevel and level <= quest.MaxLevel then
-            return quest
-        end
+        if level >= quest.MinLevel and level <= quest.MaxLevel then return quest end
     end
     return QuestsData[sea][#QuestsData[sea]]
 end
 
 -- =================================================================
--- 3. جلب الـ NPC مع خطة احتياطية للإحداثيات
+-- 3. نظام التوين المستقر (TweenService - Speed 220)
 -- =================================================================
-local function GetNPCCFrame(questData)
-    if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
-        local npc = workspace.NPCs[questData.NPCName]
-        if npc:FindFirstChild("HumanoidRootPart") then
-            return npc.HumanoidRootPart.CFrame
-        end
+local currentTween = nil
+
+local function SafeTween(targetCFrame)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = character.HumanoidRootPart
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    
+    -- إذا كان قريب جداً يتنقل فوراً
+    if distance < 10 then
+        hrp.CFrame = targetCFrame
+        return
     end
-    return questData.FallbackNPC
+
+    local speed = 200 -- سرعة آمنة تمنع الـ Anti-Cheat من إرجاعك
+    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+
+    -- إلغاء التصادم والجاذبية
+    local bv = hrp:FindFirstChild("RedzVelocity") or Instance.new("BodyVelocity")
+    bv.Name = "RedzVelocity"
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bv.Parent = hrp
+
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+ 
+    if currentTween then currentTween:Cancel() end
+    currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    currentTween:Play()
 end
 
-local function GetEnemyModel(enemyName)
+-- =================================================================
+-- 4. البحث عن الوحش في الـ Workspace
+-- =================================================================
+local function GetTargetEnemy(enemyName)
     if workspace:FindFirstChild("Enemies") then
-        for _, v in pairs(workspace.Enemies:GetChildren()) do
-            if v.Name == enemyName and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                if v:FindFirstChild("HumanoidRootPart") then
-                    return v
+        for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+            if enemy.Name == enemyName and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                if enemy:FindFirstChild("HumanoidRootPart") then
+                    return enemy
                 end
             end
         end
@@ -109,48 +132,6 @@ local function GetEnemyModel(enemyName)
     return nil
 end
 
--- =================================================================
--- 4. حركة Redz Smooth Tween (Speed 300)
--- =================================================================
-local function RedzTween(targetCFrame)
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    
-    local hrp = character.HumanoidRootPart
-    local speed = 300
-
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Parent = hrp
-
-    local noclip = RunService.Stepped:Connect(function()
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end)
-
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local travelTime = distance / speed
-    local startTime = tick()
-
-    while (tick() - startTime) < travelTime and _G.AutoFarm do
-        if not character or not character:FindFirstChild("HumanoidRootPart") then break end
-        local alpha = (tick() - startTime) / travelTime
-        hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, alpha)
-        RunService.Heartbeat:Wait()
-    end
-
-    if hrp then hrp.CFrame = targetCFrame end
-    bodyVelocity:Destroy()
-    noclip:Disconnect()
-end
-
--- =================================================================
--- 5. الضرب السريع Fast Attack
--- =================================================================
 local function FastAttack()
     pcall(function()
         local weapon = LocalPlayer.Character:FindFirstChildOfClass("Tool")
@@ -162,7 +143,7 @@ local function FastAttack()
 end
 
 -- =================================================================
--- 6. الحلقة الأساسية
+-- 5. الحلقة الرئيسية
 -- =================================================================
 task.spawn(function()
     while true do
@@ -174,29 +155,31 @@ task.spawn(function()
                 local hasQuest = myGui and myGui:FindFirstChild("Quest") and myGui.Quest.Visible
 
                 if not hasQuest then
-                    -- الانقال للـ NPC أخذ المهمة
-                    local npcPos = GetNPCCFrame(questData)
-                    if npcPos then
-                        RedzTween(npcPos * CFrame.new(0, 2, 3))
-                        task.wait(0.3)
-                        pcall(function()
-                            CommF:InvokeServer("StartQuest", questData.QuestName, 1)
-                        end)
+                    -- الذهاب لأخذ المهمة
+                    local npcPos = questData.FallbackNPC
+                    if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
+                        npcPos = workspace.NPCs[questData.NPCName].HumanoidRootPart.CFrame
+                    end
+                    
+                    SafeTween(npcPos * CFrame.new(0, 2, 3))
+                    if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 10 then
+                        CommF:InvokeServer("StartQuest", questData.QuestName, 1)
                     end
                 else
-                    -- البحث عن الوحش أو الانتقال لمنطقته الاحتياطية
-                    local enemy = GetEnemyModel(questData.EnemyName)
+                    -- الذهاب لقتل الوحش
+                    local enemy = GetTargetEnemy(questData.EnemyName)
                     if enemy then
-                        local targetPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 9, 0)
-                        if (LocalPlayer.Character.HumanoidRootPart.Position - targetPos.Position).Magnitude > 15 then
-                            RedzTween(targetPos)
-                        else
-                            LocalPlayer.Character.HumanoidRootPart.CFrame = targetPos
+                        local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0)
+                        SafeTween(enemyPos)
+                        
+                        -- الضرب إذا وصل فوق الوحش
+                        if (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude < 15 then
+                            LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
                             FastAttack()
                         end
                     else
-                        -- إذا لم يتكون الوحش بعد، ينتظر في منطقته
-                        RedzTween(questData.FallbackNPC * CFrame.new(0, 20, 20))
+                        -- إذا لم ترسبن الوحوش ينتظر في المكان
+                        SafeTween(questData.FallbackNPC * CFrame.new(0, 30, 0))
                     end
                 end
             end
@@ -205,17 +188,17 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 7. الواجهة (Redz Hub UI)
+-- 6. UI
 -- =================================================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RedzHubWorking"
+ScreenGui.Name = "RedzHubStable"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = gethui and gethui() or CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 280, 0, 150)
 MainFrame.Position = UDim2.new(0.5, -140, 0.4, -75)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -226,7 +209,7 @@ UICorner.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Text = "Redz Hub - Fixed Auto Farm"
+Title.Text = "Spider Hub [2.0]"
 Title.TextColor3 = Color3.fromRGB(255, 50, 50)
 Title.TextSize = 13
 Title.Font = Enum.Font.SourceSansBold
@@ -250,13 +233,21 @@ ToggleBtn.MouseButton1Click:Connect(function()
     _G.AutoFarm = not _G.AutoFarm
     ToggleBtn.Text = _G.AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
     ToggleBtn.BackgroundColor3 = _G.AutoFarm and Color3.fromRGB(30, 180, 80) or Color3.fromRGB(180, 30, 30)
+    
+    if not _G.AutoFarm and currentTween then
+        currentTween:Cancel()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local bv = LocalPlayer.Character.HumanoidRootPart:FindFirstChild("RedzVelocity")
+            if bv then bv:Destroy() end
+        end
+    end
 end)
 
 local ToggleUI = Instance.new("TextButton")
 ToggleUI.Size = UDim2.new(0, 45, 0, 45)
 ToggleUI.Position = UDim2.new(0, 15, 0.5, -22)
-ToggleUI.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-ToggleUI.Text = "REDZ"
+ToggleUI.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleUI.Text = "🕷"
 ToggleUI.TextColor3 = Color3.fromRGB(255, 50, 50)
 ToggleUI.TextSize = 12
 ToggleUI.Font = Enum.Font.SourceSansBold
