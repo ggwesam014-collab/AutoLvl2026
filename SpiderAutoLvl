@@ -1,5 +1,5 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Final Anti-Rubberband & Auto-Equip Fix
+-- Spider Hub - { 2.0 } | Absolute Anti-Rubberband & Auto Quest Level
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -13,7 +13,7 @@ local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 _G.AutoFarm = false
 
 -- =================================================================
--- 1. جدول المهام الشامل
+-- 1. جدول المهام لجميع البحار
 -- =================================================================
 local QuestsData = {
     ["FirstSea"] = {
@@ -65,11 +65,15 @@ local function GetCurrentSea()
     else return "FirstSea" end
 end
 
+-- جلب اللفل المباشر والدقيق
 local function GetPlayerLevel()
     local lvl = 1
     pcall(function()
         if LocalPlayer:FindFirstChild("Data") and LocalPlayer.Data:FindFirstChild("Level") then
             lvl = LocalPlayer.Data.Level.Value
+        elseif LocalPlayer.PlayerGui.Main:FindFirstChild("Level") then
+            local txt = LocalPlayer.PlayerGui.Main.Level.Text
+            lvl = tonumber(string.match(txt, "%d+")) or 1
         end
     end)
     return lvl
@@ -87,58 +91,59 @@ local function GetMyQuestData()
 end
 
 -- =================================================================
--- 2. محرك تنقل سلس بدون تجمد أو رجوع (Bypass Tween Body)
+-- 2. محرك تنقل فائق الاستقرار بدون ارتداء
 -- =================================================================
-local function NoClip()
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end
-
-local function StopVelocity()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-        LocalPlayer.Character.HumanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
-    end
-end
-
-local function SmoothMoveTo(targetCFrame)
+local function BypassTeleport(targetCFrame)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
     local hrp = char.HumanoidRootPart
+    
+    -- إيقاف جميع التصادمات والسرعات القديمة
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+            part.Velocity = Vector3.new(0, 0, 0)
+            part.RotVelocity = Vector3.new(0, 0, 0)
+        end
+    end
+
     local dist = (hrp.Position - targetCFrame.Position).Magnitude
-
-    NoClip()
-
-    if dist < 8 then
+    if dist < 10 then
         hrp.CFrame = targetCFrame
-        StopVelocity()
         return
     end
 
-    local speed = 280 -- سرعة آمنة وممتازة للتنقل بدون كشف
-    local timeToTravel = dist / speed
+    -- قفزة إرتفاع تجنباً للبنيات
+    if dist > 100 then
+        hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 60, hrp.Position.Z)
+        task.wait(0.02)
+    end
 
-    local tweenInfo = TweenInfo.new(timeToTravel, Enum.EasingStyle.Linear)
-    local tween = game:GetService("TweenService"):Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    
-    tween:Play()
-    
-    while tween.PlaybackState == Enum.PlaybackState.Playing do
-        if not _G.AutoFarm then tween:Cancel() break end
-        NoClip()
-        StopVelocity()
-        task.wait()
+    local step = 12
+    local steps = math.floor(dist / step)
+    local dir = (targetCFrame.Position - hrp.Position).Unit
+
+    for i = 1, steps do
+        if not _G.AutoFarm or not LocalPlayer.Character then break end
+        
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+
+        hrp.CFrame = hrp.CFrame + (dir * step)
+        hrp.Velocity = Vector3.new(0, 0, 0)
+        task.wait(0.01)
+    end
+
+    if _G.AutoFarm and LocalPlayer.Character then
+        hrp.CFrame = targetCFrame
+        hrp.Velocity = Vector3.new(0, 0, 0)
     end
 end
 
 -- =================================================================
--- 3. تجهيز السلاح التلقائي والقتال
+-- 3. التجهيز والقتال
 -- =================================================================
 local function EquipWeapon()
     pcall(function()
@@ -188,7 +193,7 @@ local function FastAttack()
 end
 
 -- =================================================================
--- 4. الحلقة الأساسية الذكية (Smart Main Loop)
+-- 4. الحلقة الرئيسية المحدثة
 -- =================================================================
 local lastQuestAttempt = 0
 
@@ -201,7 +206,7 @@ task.spawn(function()
                 local questActive = HasQuestActive()
 
                 if not questActive then
-                    -- الذهاب واستلام المهمة الصحيحة
+                    -- الذهاب واستلام المهمة المناسبة للفل الحالي
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -210,33 +215,32 @@ task.spawn(function()
                         end
                     end
 
-                    SmoothMoveTo(npcPos * CFrame.new(0, 1, 2))
+                    BypassTeleport(npcPos * CFrame.new(0, 1, 2))
 
                     local dist = (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude
-                    if dist < 12 then
+                    if dist < 15 then
                         if tick() - lastQuestAttempt > 0.8 then
                             lastQuestAttempt = tick()
                             CommF:InvokeServer("StartQuest", questData.QuestName, 1)
                         end
                     end
                 else
-                    -- الذهاب لموقع الوحش والقتال الآمن من الأعلى
+                    -- القتال والوقوف الثابت أعلى الوحوش
                     local enemy = GetTargetEnemy(questData.EnemyName)
                     if enemy then
                         local enemyPos = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 6, 0)
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
 
-                        if dist > 8 then
-                            SmoothMoveTo(enemyPos)
+                        if dist > 10 then
+                            BypassTeleport(enemyPos)
                         else
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
-                            StopVelocity()
-                            NoClip()
+                            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
                             FastAttack()
                         end
                     else
-                        -- الانتظار فوق موقع ظهور الوحش
-                        SmoothMoveTo(questData.FallbackNPC * CFrame.new(0, 15, 0))
+                        -- الانتظار فوق نقطة ظهور الوحوش
+                        BypassTeleport(questData.FallbackNPC * CFrame.new(0, 15, 0))
                     end
                 end
             end
@@ -325,7 +329,6 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
         AutoFarmBtn.Text = "Auto Farm Level: OFF"
         AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
         AutoFarmBtn.TextColor3 = Color3.fromRGB(220, 20, 20)
-        StopVelocity()
     end
 end)
 
