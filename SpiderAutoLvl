@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Fixed NPC Stuck Bug + Forced Waypoint Navigation (Sea 1, 2, 3 - Level 2800)
+-- Direct Teleport System (Sea 1, 2, 3 - Level 2800)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -56,7 +56,7 @@ local function equipWeapon()
     end
 end
 
--- Noclip System
+-- Noclip System (Global)
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -69,24 +69,15 @@ task.spawn(function()
     end
 end)
 
--- Fast Movement System
-local function flyTo(targetCFrame)
+-- Direct Instant Teleport Function
+local function directTeleport(targetCFrame)
     local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = character.HumanoidRootPart
-    
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    
-    if distance > 15 then
-        local speed = 350
-        local direction = (targetCFrame.Position - hrp.Position).Unit
-        hrp.CFrame = hrp.CFrame + (direction * (speed * task.wait()))
-    else
-        hrp.CFrame = targetCFrame
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = targetCFrame
     end
 end
 
--- Check if Has Quest
+-- Check UI Active Quest
 local function hasQuest()
     local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
     if playerGui then
@@ -98,7 +89,7 @@ local function hasQuest()
     return false
 end
 
--- Quests & Spawn Waypoints Database (Sea 1, 2, 3 - Up to 2800)
+-- Full Database (Sea 1, 2, 3 - Level 1 to 2800)
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -170,34 +161,30 @@ local function getQuestData()
     end
 end
 
--- Main Farming Logic with Anti-Stuck Fix
-local questCooldown = 0
+-- Teleport Main Logic
+local lastQuestAttempt = 0
 
 task.spawn(function()
-    while task.wait() do
+    while task.wait(0.1) do
         if _G.AutoFarm then
             pcall(function()
                 local questInfo = getQuestData()
                 if not questInfo then return end
 
-                -- Step 1: Take Quest safely without getting stuck
-                if not hasQuest() and tick() - questCooldown > 3 then
-                    flyTo(questInfo.NpcCFrame)
+                -- Step 1: Teleport to NPC & Take Quest
+                if not hasQuest() and tick() - lastQuestAttempt > 2.5 then
+                    directTeleport(questInfo.NpcCFrame)
                     
-                    local distToNPC = (LocalPlayer.Character.HumanoidRootPart.Position - questInfo.NpcCFrame.Position).Magnitude
-                    if distToNPC <= 20 then
-                        local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                        if commF then
-                            commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
-                            questCooldown = tick()
-                            
-                            -- Break out of NPC position immediately after asking
-                            task.wait(0.2)
-                            LocalPlayer.Character.HumanoidRootPart.CFrame = questInfo.MobWaypoint * CFrame.new(0, 15, 0)
-                        end
+                    local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                    if commF then
+                        commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
+                        lastQuestAttempt = tick()
+                        task.wait(0.1)
+                        -- Instantly escape NPC position to Waypoint
+                        directTeleport(questInfo.MobWaypoint * CFrame.new(0, 10, 0))
                     end
                 else
-                    -- Step 2: Target Enemies or Move to Mob Spawn Waypoint
+                    -- Step 2: Teleport to Mob Waypoint / Mob Target
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
@@ -211,16 +198,14 @@ task.spawn(function()
                     end
 
                     if targetMob then
-                        -- Attack target mob
-                        local mobPos = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0)
-                        flyTo(mobPos)
-                        
+                        -- Teleport directly 8 studs above mob & attack
+                        directTeleport(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
                         equipWeapon()
                         VirtualUser:CaptureController()
                         VirtualUser:ClickButton1(Vector2.new(500, 500))
                     else
-                        -- Force movement to Waypoint to spawn mobs
-                        flyTo(questInfo.MobWaypoint * CFrame.new(0, 12, 0))
+                        -- Teleport directly to Waypoint to spawn mob
+                        directTeleport(questInfo.MobWaypoint * CFrame.new(0, 10, 0))
                     end
                 end
             end)
