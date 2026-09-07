@@ -1,5 +1,5 @@
 -- =================================================================
--- Spider Hub - { 2.0 } | Fixed Bypass Tween & Clean UI
+-- Spider Hub - { 2.0 } | Anti-Rubberband & Anti-Cheat Bypass
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -77,7 +77,7 @@ local function GetMyQuestData()
 end
 
 -- =================================================================
--- 2. إيقاف الحركة والـ NoClip بشكل كامل عند الإطفاء
+-- 2. محرك التوين المتقدم المضاد للرجوع (Anti-Rubberband Engine)
 -- =================================================================
 local currentTween = nil
 local noclipConnection = nil
@@ -111,7 +111,7 @@ local function StopAllMovement()
     end
 end
 
-local function BypassTween(targetCFrame)
+local function RedzAntiRubberbandTween(targetCFrame)
     if not _G.AutoFarm then 
         StopAllMovement()
         return 
@@ -130,7 +130,7 @@ local function BypassTween(targetCFrame)
         return
     end
 
-    -- 1. إلغاء التصادم في كل Frame
+    -- 1. تفعيل NoClip دائم لمنع التصادم الذي يسبب الـ Rubberband
     if not noclipConnection then
         noclipConnection = RunService.Stepped:Connect(function()
             if _G.AutoFarm and LocalPlayer.Character then
@@ -145,7 +145,7 @@ local function BypassTween(targetCFrame)
         end)
     end
 
-    -- 2. إلغاء الجاذبية
+    -- 2. تثبيت الفيزياء لمنع تأثير الجاذبية والوقوع
     local bv = hrp:FindFirstChild("SpiderBV") or Instance.new("BodyVelocity")
     bv.Name = "SpiderBV"
     bv.Velocity = Vector3.new(0, 0, 0)
@@ -154,9 +154,9 @@ local function BypassTween(targetCFrame)
 
     pcall(function() humanoid:ChangeState(Enum.HumanoidStateType.Physics) end)
 
-    -- 3. Tween بحساب سرعة مقبولة
-    local speed = 310
-    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
+    -- 3. سرعة آمنة وممتازة لمنع الـ Anti-Cheat (240-250)
+    local safeSpeed = 245
+    local tweenInfo = TweenInfo.new(distance / safeSpeed, Enum.EasingStyle.Linear)
     
     if currentTween then currentTween:Cancel() end
     currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
@@ -164,7 +164,7 @@ local function BypassTween(targetCFrame)
 end
 
 -- =================================================================
--- 3. فحص المهمة والضرب والقتال
+-- 3. منطق البحث عن المهام والأعداء
 -- =================================================================
 local lastQuestCheck = 0
 
@@ -200,7 +200,7 @@ local function FastAttack()
 end
 
 -- =================================================================
--- 4. الحلقة الرئيسية المحدثة
+-- 4. الحلقة الأساسية
 -- =================================================================
 task.spawn(function()
     while true do
@@ -211,7 +211,7 @@ task.spawn(function()
                 local questActive = HasQuestActive()
 
                 if not questActive then
-                    -- جلب المهمة
+                    -- الذهاب إلى NPC المهمة
                     local npcPos = questData.FallbackNPC
                     if workspace:FindFirstChild("NPCs") and workspace.NPCs:FindFirstChild(questData.NPCName) then
                         local npc = workspace.NPCs[questData.NPCName]
@@ -220,7 +220,7 @@ task.spawn(function()
                         end
                     end
                     
-                    BypassTween(npcPos * CFrame.new(0, 2, 3))
+                    RedzAntiRubberbandTween(npcPos * CFrame.new(0, 2, 3))
                     
                     if (LocalPlayer.Character.HumanoidRootPart.Position - npcPos.Position).Magnitude < 15 then
                         if tick() - lastQuestCheck > 1 then
@@ -236,15 +236,15 @@ task.spawn(function()
                         local dist = (LocalPlayer.Character.HumanoidRootPart.Position - enemyPos.Position).Magnitude
                         
                         if dist > 12 then
-                            BypassTween(enemyPos)
+                            RedzAntiRubberbandTween(enemyPos)
                         else
                             if currentTween then currentTween:Cancel() end
                             LocalPlayer.Character.HumanoidRootPart.CFrame = enemyPos
                             FastAttack()
                         end
                     else
-                        -- الانتقال لموقع السباون والانتظار
-                        BypassTween(questData.FallbackNPC * CFrame.new(0, 20, 0))
+                        -- الانتظار عند مكان السباون عند عدم وجود أعداء
+                        RedzAntiRubberbandTween(questData.FallbackNPC * CFrame.new(0, 20, 0))
                     end
                 end
             end
@@ -255,14 +255,13 @@ task.spawn(function()
 end)
 
 -- =================================================================
--- 5. الواجهة المصلحة (Spider Hub - { 2.0 })
+-- 5. الواجهة (Spider Hub - { 2.0 })
 -- =================================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SpiderHub2"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = gethui and gethui() or CoreGui
 
--- الفريم الرئيسي
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 260, 0, 170)
 MainFrame.Position = UDim2.new(0.5, -130, 0.4, -85)
@@ -277,11 +276,10 @@ MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(220, 20, 20)
-MainStroke.Thickness = 1.5 -- حدود ناعمة لا تغطي على الكلام
+MainStroke.Thickness = 1.5
 MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 MainStroke.Parent = MainFrame
 
--- العنوان
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 32)
 Title.Position = UDim2.new(0, 0, 0, 5)
@@ -292,7 +290,6 @@ Title.TextSize = 16
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
--- زر Auto Farm
 local AutoFarmBtn = Instance.new("TextButton")
 AutoFarmBtn.Size = UDim2.new(0.88, 0, 0, 38)
 AutoFarmBtn.Position = UDim2.new(0.06, 0, 0.28, 0)
@@ -313,7 +310,6 @@ BtnStroke1.Thickness = 1
 BtnStroke1.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 BtnStroke1.Parent = AutoFarmBtn
 
--- زر Coming Soon
 local ComingSoonBtn = Instance.new("TextButton")
 ComingSoonBtn.Size = UDim2.new(0.88, 0, 0, 38)
 ComingSoonBtn.Position = UDim2.new(0.06, 0, 0.60, 0)
@@ -329,7 +325,6 @@ local BtnCorner2 = Instance.new("UICorner")
 BtnCorner2.CornerRadius = UDim.new(0, 6)
 BtnCorner2.Parent = ComingSoonBtn
 
--- تفاعل زر التفعيل
 AutoFarmBtn.MouseButton1Click:Connect(function()
     _G.AutoFarm = not _G.AutoFarm
     if _G.AutoFarm then
@@ -344,7 +339,6 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- زر Toggle الدائري (عنكبوت)
 local ToggleUI = Instance.new("ImageButton")
 ToggleUI.Size = UDim2.new(0, 48, 0, 48)
 ToggleUI.Position = UDim2.new(0.05, 0, 0.2, 0)
