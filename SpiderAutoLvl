@@ -1,11 +1,11 @@
--- Spider Hub v5.0 (Safe Hitbox & Ultimate Combat Engine) | By: SpiDev
--- Safe Player Hitbox, Real Fast Attack & Fixed Attack Loop
+-- Spider Hub v6.0 (Clicker Fix & Fast Attack) | By: SpiDev
+-- UI Safe Auto Clicker, No Animation & Safe Hitbox Engine
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub v5.0",
-   LoadingTitle = "Spider Hub v5.0 Loading...",
+   Name = "Spider Hub v6.0 (Pro Combat Engine)",
+   LoadingTitle = "Spider Hub v6.0 Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
 })
@@ -42,7 +42,7 @@ local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 
--- Safe Hitbox (Shrink Player Hitbox to Minimum Size)
+-- Safe Hitbox (Shrink Player Hitbox)
 task.spawn(function()
     while task.wait(0.5) do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -57,6 +57,27 @@ task.spawn(function()
                 for _, part in pairs(LocalPlayer.Character:GetChildren()) do
                     if part:IsA("BasePart") then
                         part.CanCollide = false
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- No Attack Animation Engine (Cancel Combat Animations)
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoFarm and LocalPlayer.Character then
+            pcall(function()
+                local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    local animator = humanoid:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                            if track.Name:lower():find("attack") or track.Name:lower():find("slash") or track.Name:lower():find("punch") or track.Name:lower():find("swing") then
+                                track:Stop()
+                            end
+                        end
                     end
                 end
             end)
@@ -104,9 +125,9 @@ local function equipWeapon()
     return nil
 end
 
--- Fast Attack & Auto Hit Loop Engine
+-- Safe Auto Clicker & Fast Attack Loop (Clicks at Top-Left Screen: x=1, y=1)
 task.spawn(function()
-    while task.wait(0.01) do
+    while task.wait(0.005) do
         if _G.AutoFarm then
             pcall(function()
                 local tool = equipWeapon()
@@ -114,9 +135,10 @@ task.spawn(function()
                     tool:Activate()
                 end
                 
+                -- Click position shifted to (1, 1) to avoid hitting Rayfield UI elements
                 VirtualUser:CaptureController()
-                VirtualUser:Button1Down(Vector2.new(500, 500))
-                VirtualUser:ClickButton1(Vector2.new(500, 500))
+                VirtualUser:Button1Down(Vector2.new(1, 1))
+                VirtualUser:ClickButton1(Vector2.new(1, 1))
 
                 local net = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
                 if net then
@@ -279,7 +301,7 @@ local function getClosestMob(mobName)
     return currentLockedMob
 end
 
--- Core Auto Farm Execution Loop
+-- Core Auto Farm Loop
 local npcTimeAtLocation = 0
 local forceSkipToMobs = false
 local cameraAngleOffset = 0
@@ -293,7 +315,7 @@ task.spawn(function()
 
                 local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
-                -- Phase 1: Quest Reception
+                -- Phase 1: Quest Get
                 if not hasQuest() and not forceSkipToMobs then
                     tweenTo(qInfo.NpcCFrame)
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -318,13 +340,13 @@ task.spawn(function()
                         forceSkipToMobs = false
                     end
 
-                    -- Phase 2: Target & Attack Loop
+                    -- Phase 2: Mob Lock & Attack Loop
                     local targetMob = getClosestMob(qInfo.MobName)
 
                     if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
                         expandHitbox(targetMob)
 
-                        -- Up and Down Dynamic Camera Motion
+                        -- Up and Down Camera Motion
                         cameraAngleOffset = cameraAngleOffset + 0.15
                         local bobbingY = math.sin(cameraAngleOffset) * 2.2
                         local targetPosition = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 7.5 + bobbingY, 0)
