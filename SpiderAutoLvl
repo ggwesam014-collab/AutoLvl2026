@@ -1,11 +1,11 @@
--- Spider Hub v4.0 (Pro Auto Attack & Lock) | By: SpiDev
--- Fixed NPC Teleport Loop, Real Fast Attack & Lock Engine
+-- Spider Hub v5.0 (Safe Hitbox & Ultimate Combat Engine) | By: SpiDev
+-- Safe Player Hitbox, Real Fast Attack & Fixed Attack Loop
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub v4.0 (Pro Auto Attack & Lock)",
-   LoadingTitle = "Spider Hub v4.0 Loading...",
+   Name = "Spider Hub v5.0",
+   LoadingTitle = "Spider Hub v5.0 Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
 })
@@ -39,15 +39,37 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 
--- Advanced Weapon Equip Engine
+-- Safe Hitbox (Shrink Player Hitbox to Minimum Size)
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoFarm and LocalPlayer.Character then
+            pcall(function()
+                local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.Size = Vector3.new(0.001, 0.001, 0.001)
+                    hrp.Transparency = 1
+                    hrp.CanCollide = false
+                end
+                
+                for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Advanced Weapon Equip System
 local function equipWeapon()
     local char = LocalPlayer.Character
-    if not char then return end
+    if not char then return nil end
     local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
+    if not humanoid then return nil end
 
     local currentTool = char:FindFirstChildOfClass("Tool")
     if currentTool then
@@ -82,25 +104,29 @@ local function equipWeapon()
     return nil
 end
 
--- Working Auto Hit & Fast Attack Engine
-local function doFastAttack()
-    local tool = equipWeapon()
-    if tool then
-        tool:Activate()
-    end
-    
-    -- Fast Input Click Simulation
-    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, true, game, 1)
-    VirtualInputManager:SendMouseButtonEvent(500, 500, 0, false, game, 1)
+-- Fast Attack & Auto Hit Loop Engine
+task.spawn(function()
+    while task.wait(0.01) do
+        if _G.AutoFarm then
+            pcall(function()
+                local tool = equipWeapon()
+                if tool then
+                    tool:Activate()
+                end
+                
+                VirtualUser:CaptureController()
+                VirtualUser:Button1Down(Vector2.new(500, 500))
+                VirtualUser:ClickButton1(Vector2.new(500, 500))
 
-    pcall(function()
-        local net = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
-        if net then
-            local reg = net:FindFirstChild("RegisterAttack") or net:FindFirstChild("RE/RegisterAttack")
-            if reg then reg:FireServer(0) end
+                local net = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
+                if net then
+                    local reg = net:FindFirstChild("RegisterAttack") or net:FindFirstChild("RE/RegisterAttack")
+                    if reg then reg:FireServer(0) end
+                end
+            end)
         end
-    end)
-end
+    end
+end)
 
 -- Smooth Movement Tween
 local currentTween = nil
@@ -124,30 +150,17 @@ local function tweenTo(targetCFrame)
     currentTween:Play()
 end
 
--- Invisible Hitbox Expander
+-- Invisible Target Hitbox Expander
 local function expandHitbox(mob)
     if mob and mob:FindFirstChild("HumanoidRootPart") then
         local hrp = mob.HumanoidRootPart
-        hrp.Size = Vector3.new(25, 25, 25)
+        hrp.Size = Vector3.new(30, 30, 30)
         hrp.Transparency = 1
         hrp.CanCollide = false
     end
 end
 
--- Noclip Pass
-task.spawn(function()
-    while task.wait() do
-        if _G.AutoFarm and LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end
-end)
-
--- Multi-Check Quest System
+-- Quest Verification System
 local function hasQuest()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
     if pGui and pGui:FindFirstChild("Main") then
@@ -159,7 +172,7 @@ local function hasQuest()
     return false
 end
 
--- Level Quest Database
+-- Quest Data System
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -231,7 +244,7 @@ local function getQuestData()
     end
 end
 
--- Closest Mob Lock Engine
+-- Nearest Target Lock Engine
 local currentLockedMob = nil
 
 local function getClosestMob(mobName)
@@ -241,7 +254,7 @@ local function getClosestMob(mobName)
 
     if currentLockedMob and currentLockedMob.Parent and currentLockedMob:FindFirstChild("Humanoid") and currentLockedMob.Humanoid.Health > 0 and currentLockedMob:FindFirstChild("HumanoidRootPart") then
         local dist = (hrp.Position - currentLockedMob.HumanoidRootPart.Position).Magnitude
-        if dist <= 75 then
+        if dist <= 80 then
             return currentLockedMob
         end
     end
@@ -266,7 +279,7 @@ local function getClosestMob(mobName)
     return currentLockedMob
 end
 
--- Core Farm Loop
+-- Core Auto Farm Execution Loop
 local npcTimeAtLocation = 0
 local forceSkipToMobs = false
 local cameraAngleOffset = 0
@@ -280,7 +293,7 @@ task.spawn(function()
 
                 local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
-                -- Phase 1: Quest Get Loop
+                -- Phase 1: Quest Reception
                 if not hasQuest() and not forceSkipToMobs then
                     tweenTo(qInfo.NpcCFrame)
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -301,24 +314,22 @@ task.spawn(function()
                     end
                 else
                     npcTimeAtLocation = 0
-                    
                     if hasQuest() then
                         forceSkipToMobs = false
                     end
 
-                    -- Phase 2: Mob Farm Loop
+                    -- Phase 2: Target & Attack Loop
                     local targetMob = getClosestMob(qInfo.MobName)
 
                     if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
                         expandHitbox(targetMob)
 
-                        -- Smooth Up-and-Down Hover Motion
+                        -- Up and Down Dynamic Camera Motion
                         cameraAngleOffset = cameraAngleOffset + 0.15
                         local bobbingY = math.sin(cameraAngleOffset) * 2.2
                         local targetPosition = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 7.5 + bobbingY, 0)
 
                         tweenTo(targetPosition)
-                        doFastAttack()
                     else
                         currentLockedMob = nil
                         tweenTo(qInfo.MobWaypoint * CFrame.new(0, 8, 0))
