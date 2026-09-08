@@ -1,10 +1,10 @@
 -- Spider Hub | By: SpiDev
--- Ultimate Auto Farm (NPC Dialogue & Quest Stuck Full Fix)
+-- Ultimate Fixed Auto Farm (Quest Dialogue Fix & Bypass)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub | Blox Fruits 2026",
+   Name = "Spider Hub | Blox Fruits",
    LoadingTitle = "Spider Hub Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
@@ -41,7 +41,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- Advanced Weapon Equip (Attributes + Fallback)
+-- Advanced Weapon Equip (Attribute & Backpack Check)
 local function equipWeapon()
     local char = LocalPlayer.Character
     if not char then return end
@@ -101,7 +101,7 @@ local function tweenTo(targetCFrame)
         return
     end
 
-    local speed = 260
+    local speed = 250
     local tInfo = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear)
     
     if currentTween then currentTween:Cancel() end
@@ -144,7 +144,7 @@ local function hasQuest()
     return false
 end
 
--- Quest Database (Sea 1, 2, 3)
+-- Quest Database
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -216,8 +216,8 @@ local function getQuestData()
     end
 end
 
--- Main Farming Routine
-local npcStuckTimer = 0
+-- Main Loop
+local npcAttempts = 0
 local lastQuestAttempt = 0
 
 task.spawn(function()
@@ -229,7 +229,7 @@ task.spawn(function()
 
                 local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
-                -- Phase 1: Quest Take Stage
+                -- Phase 1: Take Quest
                 if not hasQuest() then
                     tweenTo(qInfo.NpcCFrame)
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -237,26 +237,25 @@ task.spawn(function()
                     if hrp and (hrp.Position - qInfo.NpcCFrame.Position).Magnitude <= 12 then
                         if tick() - lastQuestAttempt > 1.0 then
                             lastQuestAttempt = tick()
-                            npcStuckTimer = npcStuckTimer + 1
+                            npcAttempts = npcAttempts + 1
 
                             if commF then
-                                -- Full Dialogue Call Chain to Prevent NPC Lock
+                                -- Handshake Remote Call Sequence
                                 commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
                             end
 
-                            -- Anti-Stuck Override: If tried 3 times and still no quest UI, force move to farm area anyway!
-                            if npcStuckTimer >= 3 then
-                                npcStuckTimer = 0
+                            -- Force Bypass if NPC locks up after 2 attempts
+                            if npcAttempts >= 2 then
+                                npcAttempts = 0
                                 tweenTo(qInfo.MobWaypoint * CFrame.new(0, 8, 0))
-                                task.wait(1)
+                                task.wait(0.5)
                             end
                         end
                     end
                 else
-                    -- Reset stuck counter when quest is active
-                    npcStuckTimer = 0
+                    npcAttempts = 0
 
-                    -- Phase 2: Mob Killing Stage
+                    -- Phase 2: Attack Mobs
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
@@ -274,7 +273,6 @@ task.spawn(function()
                         tweenTo(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
                         doAttack()
                     else
-                        -- Move to Spawning Zone
                         tweenTo(qInfo.MobWaypoint * CFrame.new(0, 8, 0))
                     end
                 end
