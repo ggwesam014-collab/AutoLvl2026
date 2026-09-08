@@ -1,11 +1,11 @@
--- Spider Hub 2026 | By: SpiDev
--- Ultimate Fixed Auto Farm (Non-Blocking Quest System & Bypass)
+-- Spider Hub v2.0 (Fixed Edition) | By: SpiDev
+-- Ultimate Fixed Auto Farm (Handshake & Auto Skip Fix)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub 2026 | Blox Fruits",
-   LoadingTitle = "Spider Hub 2026 Loading...",
+   Name = "Spider Hub v2.0 (Fixed Edition)",
+   LoadingTitle = "Spider Hub v2.0 Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
 })
@@ -41,7 +41,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- Advanced Weapon Equip (Attribute & Backpack Check)
+-- Advanced Weapon Equip
 local function equipWeapon()
     local char = LocalPlayer.Character
     if not char then return end
@@ -216,8 +216,9 @@ local function getQuestData()
     end
 end
 
--- Non-Blocking Main Loop
-local isTakingQuest = false
+-- Handshake Quest System & Auto Skip
+local npcTimeAtLocation = 0
+local forceSkipToMobs = false
 
 task.spawn(function()
     while task.wait(0.05) do
@@ -228,27 +229,37 @@ task.spawn(function()
 
                 local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
-                -- Phase 1: Take Quest Without Blocking Frame Loop
-                if not hasQuest() then
+                if not hasQuest() and not forceSkipToMobs then
                     tweenTo(qInfo.NpcCFrame)
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     
                     if hrp and (hrp.Position - qInfo.NpcCFrame.Position).Magnitude <= 12 then
-                        if not isTakingQuest then
-                            isTakingQuest = true
+                        npcTimeAtLocation = npcTimeAtLocation + 0.05
+                        
+                        -- Dialogue Handshake Protocol
+                        if commF then
                             task.spawn(function()
-                                if commF then
-                                    commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
-                                end
-                                task.wait(1.5)
-                                isTakingQuest = false
+                                commF:InvokeServer("Check", qInfo.QuestName)
+                                task.wait(0.1)
+                                commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
                             end)
+                        end
+
+                        -- If stuck at NPC for over 1.5 seconds, skip to mobs automatically
+                        if npcTimeAtLocation >= 1.5 then
+                            forceSkipToMobs = true
+                            npcTimeAtLocation = 0
                         end
                     end
                 else
-                    isTakingQuest = false
+                    npcTimeAtLocation = 0
+                    
+                    -- Reset skip flag once quest is successfully acquired
+                    if hasQuest() then
+                        forceSkipToMobs = false
+                    end
 
-                    -- Phase 2: Attack Mobs
+                    -- Farm Mobs Phase
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
