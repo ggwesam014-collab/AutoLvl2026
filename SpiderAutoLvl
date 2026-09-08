@@ -1,10 +1,10 @@
 -- Spider Hub | By: SpiDev
--- Ultimate Auto Farm with Attribute Tool Check & Hitbox Expander
+-- Ultimate Fixed Auto Farm (Dialogue Simulation & Quest Stuck Fix)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub | Blox Fruits",
+   Name = "Spider Hub | Blox Fruits ( 1.6 )",
    LoadingTitle = "Spider Hub Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
@@ -41,14 +41,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- Advanced Tool Equip by Attributes ("WeaponType") & Fallback ToolTip
+-- Equip Weapon by Attributes & Backpack Check
 local function equipWeapon()
     local char = LocalPlayer.Character
     if not char then return end
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
 
-    -- Check if currently equipped tool matches criteria
     local currentTool = char:FindFirstChildOfClass("Tool")
     if currentTool then
         local wType = currentTool:GetAttribute("WeaponType") or currentTool.ToolTip
@@ -57,7 +56,6 @@ local function equipWeapon()
         if _G.SelectedWeapon == "Blox Fruit" and (wType == "Blox Fruit" or wType == "Fruit" or currentTool:FindFirstChild("EatRemote")) then return end
     end
 
-    -- Equip Tool From Backpack
     for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
         if tool:IsA("Tool") then
             local wType = tool:GetAttribute("WeaponType") or tool.ToolTip
@@ -82,14 +80,14 @@ local function equipWeapon()
     end
 end
 
--- Automatic Clicker / Attacker
+-- Attack Execution
 local function doAttack()
     equipWeapon()
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(500, 500))
 end
 
--- Smooth Tween Movement To Prevent Rubberband
+-- Anti-Bypass Tween Movement
 local currentTween = nil
 local function tweenTo(targetCFrame)
     local char = LocalPlayer.Character
@@ -97,13 +95,13 @@ local function tweenTo(targetCFrame)
     local hrp = char.HumanoidRootPart
     
     local dist = (hrp.Position - targetCFrame.Position).Magnitude
-    if dist < 5 then
+    if dist < 4 then
         if currentTween then currentTween:Cancel() end
         hrp.CFrame = targetCFrame
         return
     end
 
-    local speed = 280
+    local speed = 250
     local tInfo = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear)
     
     if currentTween then currentTween:Cancel() end
@@ -111,17 +109,17 @@ local function tweenTo(targetCFrame)
     currentTween:Play()
 end
 
--- Expand Mob Hitbox Function
+-- Expand Hitbox For Mob
 local function expandHitbox(mob)
     if mob and mob:FindFirstChild("HumanoidRootPart") then
         local hrp = mob.HumanoidRootPart
         hrp.Size = Vector3.new(25, 25, 25)
-        hrp.Transparency = 0.7
+        hrp.Transparency = 0.8
         hrp.CanCollide = false
     end
 end
 
--- Noclip Bypass Loop
+-- Disable Character Collision (Noclip)
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -134,16 +132,21 @@ task.spawn(function()
     end
 end)
 
--- Active Quest Check
+-- Double Quest Visibility Check
 local function hasQuest()
     local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if pGui and pGui:FindFirstChild("Main") and pGui.Main:FindFirstChild("Quest") then
-        return pGui.Main.Quest.Visible
+    if pGui then
+        local main = pGui:FindFirstChild("Main")
+        if main and main:FindFirstChild("Quest") then
+            if main.Quest.Visible == true then
+                return true
+            end
+        end
     end
     return false
 end
 
--- Quests Database (Sea 1, 2, 3)
+-- Quests Database
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
@@ -215,31 +218,36 @@ local function getQuestData()
     end
 end
 
--- Main Farming Routine
-local lastQuestAttempt = 0
+-- Main Loop
+local lastQuestTime = 0
 
 task.spawn(function()
-    while task.wait(0.03) do
+    while task.wait(0.05) do
         if _G.AutoFarm then
             pcall(function()
                 local qInfo = getQuestData()
                 if not qInfo then return end
 
-                -- Step 1: Check Quest Status
+                -- Step 1: Quest Processing with Fail-Safe Timeout
                 if not hasQuest() then
                     tweenTo(qInfo.NpcCFrame)
-                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position - qInfo.NpcCFrame.Position).Magnitude <= 12 then
-                        if tick() - lastQuestAttempt > 1.2 then
-                            local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                            if commF then
-                                commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
-                                lastQuestAttempt = tick()
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") then
+                        local dist = (char.HumanoidRootPart.Position - qInfo.NpcCFrame.Position).Magnitude
+                        if dist <= 10 then
+                            if tick() - lastQuestTime > 1.5 then
+                                local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                                if commF then
+                                    -- Force Dialogue Simulation sequence to un-stick
+                                    commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
+                                    task.wait(0.1)
+                                    lastQuestTime = tick()
+                                end
                             end
                         end
                     end
                 else
-                    -- Step 2: Quest Active -> Target Mob
+                    -- Step 2: Quest Active -> Go directly to Mob Area
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
@@ -254,11 +262,10 @@ task.spawn(function()
 
                     if targetMob then
                         expandHitbox(targetMob)
-                        -- Hover above target using smooth tween
-                        tweenTo(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 9, 0))
+                        tweenTo(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
                         doAttack()
                     else
-                        -- Move to Spawning Area if Mob not visible
+                        -- Go directly to mob spawn area to trigger spawn
                         tweenTo(qInfo.MobWaypoint * CFrame.new(0, 8, 0))
                     end
                 end
