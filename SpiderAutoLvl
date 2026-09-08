@@ -1,5 +1,5 @@
 -- Spider Hub | By: SpiDev
--- Universal Auto Farm Fix (All Seas 1, 2, 3)
+-- Fully Integrated Auto Farm (Anchor Parts + Anti-Despawn + Smooth Tween)
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -38,38 +38,58 @@ local Dropdown = Tab:CreateDropdown({
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
--- Fast Direct Equip (Bypasses Inventory Bug)
-local function equipWeapon()
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("Humanoid") then return end
+-- Invisible Anchor Part Creator for Anti-Despawn Zone
+local activeAnchor = nil
+local function updateAnchor(targetCFrame)
+    if not activeAnchor or not activeAnchor.Parent then
+        activeAnchor = Instance.new("Part")
+        activeAnchor.Name = "Spider_Mob_Anchor"
+        activeAnchor.Size = Vector3.new(5, 1, 5)
+        activeAnchor.Anchored = true
+        activeAnchor.CanCollide = false
+        activeAnchor.Transparency = 1
+        activeAnchor.Parent = workspace
+    end
+    activeAnchor.CFrame = targetCFrame
+end
 
-    -- Equip any available tool matching weapon category
-    for _, item in pairs(LocalPlayer.Backpack:GetChildren()) do
-        if item:IsA("Tool") then
-            if _G.SelectedWeapon == "Melee" and (item.ToolTip == "Melee" or item:FindFirstChild("Melee") or item.Name == "Combat" or item.Name:find("Step") or item.Name:find("Kung") or item.Name:find("Karate") or item.Name:find("Claw") or item.Name:find("Leg") or item.Name:find("God")) then
-                character.Humanoid:EquipTool(item)
+-- Force Equip Weapon from Backpack
+local function equipWeapon()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    -- Equip Tool If Backpack Has Items
+    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            if _G.SelectedWeapon == "Melee" then
+                if tool.ToolTip == "Melee" or tool:FindFirstChild("Melee") or tool.Name == "Combat" or tool.Name:find("Step") or tool.Name:find("Kung") or tool.Name:find("Karate") or tool.Name:find("Claw") or tool.Name:find("Leg") or tool.Name:find("God") then
+                    humanoid:EquipTool(tool)
+                    break
+                end
+            elseif _G.SelectedWeapon == "Sword" and (tool.ToolTip == "Sword" or tool:FindFirstChild("Sword")) then
+                humanoid:EquipTool(tool)
                 break
-            elseif _G.SelectedWeapon == "Sword" and (item.ToolTip == "Sword" or item:FindFirstChild("Sword")) then
-                character.Humanoid:EquipTool(item)
-                break
-            elseif _G.SelectedWeapon == "Blox Fruit" and (item.ToolTip == "Blox Fruit" or item:FindFirstChild("EatRemote")) then
-                character.Humanoid:EquipTool(item)
+            elseif _G.SelectedWeapon == "Blox Fruit" and (tool.ToolTip == "Blox Fruit" or tool:FindFirstChild("EatRemote")) then
+                humanoid:EquipTool(tool)
                 break
             end
         end
     end
 end
 
--- Attack Execution
+-- Attack Executor
 local function doAttack()
     equipWeapon()
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(500, 500))
 end
 
--- Noclip Bypass
+-- Disable Character Collision (Noclip)
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -82,32 +102,42 @@ task.spawn(function()
     end
 end)
 
--- Instant Safe CFrame Teleport (Bypasses Rubberband & Tween Cancel)
-local function safeTeleport(targetCFrame)
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-        character.HumanoidRootPart.CFrame = targetCFrame
+-- Anti-Bypass Smooth Tween
+local currentTween = nil
+local function smoothTween(targetCFrame)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    
+    local dist = (hrp.Position - targetCFrame.Position).Magnitude
+    if dist < 6 then
+        if currentTween then currentTween:Cancel() end
+        hrp.CFrame = targetCFrame
+        return
     end
+
+    local speed = 280
+    local tInfo = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear)
+    
+    if currentTween then currentTween:Cancel() end
+    currentTween = TweenService:Create(hrp, tInfo, {CFrame = targetCFrame})
+    currentTween:Play()
 end
 
 -- Active Quest Check
 local function hasQuest()
-    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        local main = playerGui:FindFirstChild("Main")
-        if main and main:FindFirstChild("Quest") then
-            return main.Quest.Visible
-        end
+    local pGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if pGui and pGui:FindFirstChild("Main") and pGui.Main:FindFirstChild("Quest") then
+        return pGui.Main.Quest.Visible
     end
     return false
 end
 
--- Complete Quests Database (Sea 1, Sea 2, Sea 3)
+-- Comprehensive Quest Database
 local function getQuestData()
     local level = LocalPlayer.Data.Level.Value
     
-    -- SEA 1
+    -- FIRST SEA
     if level >= 1 and level < 15 then
         return {QuestName = "BanditQuest1", QuestNum = 1, MobName = "Bandit", NpcCFrame = CFrame.new(1059, 16, 1548), MobWaypoint = CFrame.new(1145, 17, 1634)}
     elseif level >= 15 and level < 30 then
@@ -135,7 +165,7 @@ local function getQuestData()
     elseif level >= 625 and level < 700 then
         return {QuestName = "FountainQuest", QuestNum = 1, MobName = "Corporal", NpcCFrame = CFrame.new(5259, 38, 4050), MobWaypoint = CFrame.new(5050, 38, 3970)}
 
-    -- SEA 2
+    -- SECOND SEA
     elseif level >= 700 and level < 775 then
         return {QuestName = "Area1Quest", QuestNum = 1, MobName = "Raider", NpcCFrame = CFrame.new(-425, 73, 1836), MobWaypoint = CFrame.new(-720, 78, 2340)}
     elseif level >= 775 and level < 875 then
@@ -153,7 +183,7 @@ local function getQuestData()
     elseif level >= 1425 and level < 1500 then
         return {QuestName = "WaterFighterQuest", QuestNum = 1, MobName = "Water Fighter", NpcCFrame = CFrame.new(2888, 14, -5283), MobWaypoint = CFrame.new(3100, 14, -5350)}
 
-    -- SEA 3
+    -- THIRD SEA
     elseif level >= 1500 and level < 1575 then
         return {QuestName = "PiratePortQuest", QuestNum = 1, MobName = "Pirate Millionaire", NpcCFrame = CFrame.new(-290, 44, 5580), MobWaypoint = CFrame.new(-380, 44, 5500)}
     elseif level >= 1575 and level < 1700 then
@@ -175,35 +205,39 @@ local function getQuestData()
     end
 end
 
--- Core Auto Farm Execution Loop
-local lastQuestTime = 0
+-- Main Loop Logic
+local questCooldwn = 0
 
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.05) do
         if _G.AutoFarm then
             pcall(function()
-                local questInfo = getQuestData()
-                if not questInfo then return end
+                local qInfo = getQuestData()
+                if not qInfo then return end
 
-                -- Step 1: Start Quest if not active
+                updateAnchor(qInfo.MobWaypoint)
+
+                -- Stage 1: Get Quest without Stuck Bug
                 if not hasQuest() then
-                    if tick() - lastQuestTime > 1.5 then
-                        safeTeleport(questInfo.NpcCFrame)
-                        task.wait(0.1)
-                        local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                        if commF then
-                            commF:InvokeServer("StartQuest", questInfo.QuestName, questInfo.QuestNum)
-                            lastQuestTime = tick()
+                    smoothTween(qInfo.NpcCFrame)
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp and (hrp.Position - qInfo.NpcCFrame.Position).Magnitude <= 15 then
+                        if tick() - questCooldwn > 1.2 then
+                            local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                            if commF then
+                                commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
+                                questCooldwn = tick()
+                            end
                         end
                     end
                 else
-                    -- Step 2: Find Enemy or Move to Spawn
+                    -- Stage 2: Attack Mobs or Move to Anchor Part
                     local targetMob = nil
                     local enemies = workspace:FindFirstChild("Enemies")
                     
                     if enemies then
                         for _, mob in pairs(enemies:GetChildren()) do
-                            if (mob.Name == questInfo.MobName or mob.Name:find(questInfo.MobName)) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
+                            if mob.Name:find(qInfo.MobName) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
                                 targetMob = mob
                                 break
                             end
@@ -211,10 +245,11 @@ task.spawn(function()
                     end
 
                     if targetMob then
-                        safeTeleport(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0))
+                        smoothTween(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
                         doAttack()
                     else
-                        safeTeleport(questInfo.MobWaypoint * CFrame.new(0, 8, 0))
+                        -- Move to Anchor Part to Force Mob Spawn
+                        smoothTween(qInfo.MobWaypoint * CFrame.new(0, 9, 0))
                     end
                 end
             end)
