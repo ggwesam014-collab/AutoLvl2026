@@ -1,11 +1,11 @@
--- Spider Hub v2.0 (Fixed Edition) | By: SpiDev
--- Ultimate Fixed Auto Farm (Handshake & Auto Skip Fix)
+-- Spider Hub v3.0 (Fast Attack & Combat Fix) | By: SpiDev
+-- Ultimate Fast Attack, Hitbox Lock & Camera Motion Engine
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub v2.0 (Fixed Edition)",
-   LoadingTitle = "Spider Hub v2.0 Loading...",
+   Name = "Spider Hub v3.0 (Fast Attack & Combat Fix)",
+   LoadingTitle = "Spider Hub v3.0 Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
 })
@@ -40,6 +40,7 @@ local LocalPlayer = Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
 
 -- Advanced Weapon Equip
 local function equipWeapon()
@@ -80,14 +81,32 @@ local function equipWeapon()
     end
 end
 
--- Auto Attack
-local function doAttack()
+-- Ultra Fast Attack Engine
+local function doFastAttack()
     equipWeapon()
+    
+    -- Virtual Click Simulation
     VirtualUser:CaptureController()
     VirtualUser:Button1Down(Vector2.new(500, 500))
+    
+    -- Direct Net Remote Attack (Fast Attack)
+    pcall(function()
+        local netFolder = ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
+        if netFolder then
+            local registerAttack = netFolder:FindFirstChild("RegisterAttack") or netFolder:FindFirstChild("RE/RegisterAttack")
+            if registerAttack then
+                registerAttack:FireServer(0)
+            end
+        end
+        
+        local combatRemote = ReplicatedStorage:FindFirstChild("RigControllerEvent")
+        if combatRemote then
+            combatRemote:FireServer("weaponChange", tostring(_G.SelectedWeapon))
+        end
+    end)
 end
 
--- Anti-Bypass Tween
+-- Smooth Movement Tween
 local currentTween = nil
 local function tweenTo(targetCFrame)
     local char = LocalPlayer.Character
@@ -109,17 +128,17 @@ local function tweenTo(targetCFrame)
     currentTween:Play()
 end
 
--- Expand Hitbox
+-- Invisible Hitbox Expander
 local function expandHitbox(mob)
     if mob and mob:FindFirstChild("HumanoidRootPart") then
         local hrp = mob.HumanoidRootPart
         hrp.Size = Vector3.new(25, 25, 25)
-        hrp.Transparency = 0.8
+        hrp.Transparency = 1 -- Complete Invisible Hitbox
         hrp.CanCollide = false
     end
 end
 
--- Noclip Bypass
+-- Noclip Pass
 task.spawn(function()
     while task.wait() do
         if _G.AutoFarm and LocalPlayer.Character then
@@ -216,12 +235,50 @@ local function getQuestData()
     end
 end
 
--- Handshake Quest System & Auto Skip
+-- Target Lock Engine (Find Nearest Mob under Hitbox)
+local currentLockedMob = nil
+
+local function getClosestMob(mobName)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local hrp = char.HumanoidRootPart
+
+    -- Keep target if alive and within valid range
+    if currentLockedMob and currentLockedMob.Parent and currentLockedMob:FindFirstChild("Humanoid") and currentLockedMob.Humanoid.Health > 0 and currentLockedMob:FindFirstChild("HumanoidRootPart") then
+        local dist = (hrp.Position - currentLockedMob.HumanoidRootPart.Position).Magnitude
+        if dist <= 60 then
+            return currentLockedMob
+        end
+    end
+
+    -- Find new closest mob
+    local closestMob = nil
+    local shortestDistance = math.huge
+    local enemies = Workspace:FindFirstChild("Enemies")
+
+    if enemies then
+        for _, mob in pairs(enemies:GetChildren()) do
+            if mob.Name:find(mobName) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
+                local dist = (hrp.Position - mob.HumanoidRootPart.Position).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    closestMob = mob
+                end
+            end
+        end
+    end
+
+    currentLockedMob = closestMob
+    return currentLockedMob
+end
+
+-- Main Farm & Dynamic Camera Oscillation Loop
 local npcTimeAtLocation = 0
 local forceSkipToMobs = false
+local cameraAngleOffset = 0
 
 task.spawn(function()
-    while task.wait(0.05) do
+    while task.wait(0.02) do
         if _G.AutoFarm then
             pcall(function()
                 local qInfo = getQuestData()
@@ -229,24 +286,24 @@ task.spawn(function()
 
                 local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
 
+                -- Phase 1: Quest Pickup (Exact 0.85 Sec Limit)
                 if not hasQuest() and not forceSkipToMobs then
                     tweenTo(qInfo.NpcCFrame)
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     
                     if hrp and (hrp.Position - qInfo.NpcCFrame.Position).Magnitude <= 12 then
-                        npcTimeAtLocation = npcTimeAtLocation + 0.05
+                        npcTimeAtLocation = npcTimeAtLocation + 0.02
                         
-                        -- Dialogue Handshake Protocol
                         if commF then
                             task.spawn(function()
                                 commF:InvokeServer("Check", qInfo.QuestName)
-                                task.wait(0.1)
+                                task.wait(0.05)
                                 commF:InvokeServer("StartQuest", qInfo.QuestName, qInfo.QuestNum)
                             end)
                         end
 
-                        -- If stuck at NPC for over 1.5 seconds, skip to mobs automatically
-                        if npcTimeAtLocation >= 1.5 then
+                        -- Custom 0.85 Seconds Quest Timeout Limit
+                        if npcTimeAtLocation >= 0.85 then
                             forceSkipToMobs = true
                             npcTimeAtLocation = 0
                         end
@@ -254,29 +311,25 @@ task.spawn(function()
                 else
                     npcTimeAtLocation = 0
                     
-                    -- Reset skip flag once quest is successfully acquired
                     if hasQuest() then
                         forceSkipToMobs = false
                     end
 
-                    -- Farm Mobs Phase
-                    local targetMob = nil
-                    local enemies = workspace:FindFirstChild("Enemies")
-                    
-                    if enemies then
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            if mob.Name:find(qInfo.MobName) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
-                                targetMob = mob
-                                break
-                            end
-                        end
-                    end
+                    -- Phase 2: Mob Farm & Lock
+                    local targetMob = getClosestMob(qInfo.MobName)
 
-                    if targetMob then
+                    if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
                         expandHitbox(targetMob)
-                        tweenTo(targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0))
-                        doAttack()
+
+                        -- Dynamic Camera & Hover Bobbing (Up and Down Motion)
+                        cameraAngleOffset = cameraAngleOffset + 0.15
+                        local bobbingY = math.sin(cameraAngleOffset) * 2.5
+                        local targetPosition = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 8 + bobbingY, 0)
+
+                        tweenTo(targetPosition)
+                        doFastAttack()
                     else
+                        currentLockedMob = nil
                         tweenTo(qInfo.MobWaypoint * CFrame.new(0, 8, 0))
                     end
                 end
