@@ -4,7 +4,7 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Spider Hub | Blox Fruits",
+   Name = "Spider Hub | Blox Fruits 2026",
    LoadingTitle = "Spider Hub Loading...",
    LoadingSubtitle = "By: SpiDev",
    ConfigurationSaving = { Enabled = false }
